@@ -3,9 +3,9 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Service\Slugify;
 
 final class ProductController extends AbstractController
 {
@@ -28,10 +28,16 @@ final class ProductController extends AbstractController
 
 
     #[Route('/product/{id}', name: 'product_view')]
-    public function viewProduct(int $id): Response
+    public function viewProduct(int $id, Slugify $slugify): Response
     {
+        $productTitle = "T-Shirt d'Été !";
+
+        $slug = $slugify->slugify($productTitle);
+
         return $this->render('product/view.html.twig', [
             'productId' => $id,
+            'productTitle' => $productTitle,
+            'productSlug' => $slug,
         ]);
     }
 }
