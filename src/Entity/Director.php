@@ -3,17 +3,14 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
-use App\Repository\ActorRepository;
+use App\Repository\DirectorRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
 
-#[ORM\Entity(repositoryClass: ActorRepository::class)]
-#[ORM\HasLifecycleCallbacks]
+#[ORM\Entity(repositoryClass: DirectorRepository::class)]
 #[ApiResource]
-class Actor
+class Director
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -21,19 +18,20 @@ class Actor
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "Le nom de famille de l'acteur est obligatoire.")]
+    #[Assert\NotBlank(message: "Le nom de famille du réalisateur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le nom ne peut pas dépasser 255 caractères.")]
     private ?string $lastname = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le prénom du réalisateur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le prénom ne peut pas dépasser 255 caractères.")]
     private ?string $firstname = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[ORM\Column]
     #[Assert\LessThan("today", message: "La date de naissance doit être dans le passé.")]
     private ?\DateTime $dob = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[ORM\Column(nullable: true)]
     #[Assert\LessThan("today", message: "La date de décès doit être dans le passé.")]
     #[Assert\Expression(
         "this.getDod() === null or this.getDob() === null or this.getDod() > this.getDob()",
@@ -41,20 +39,11 @@ class Actor
     )]
     private ?\DateTime $dod = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $bio = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $photo = null;
-
     /**
      * @var Collection<int, Movie>
      */
-    #[ORM\ManyToMany(targetEntity: Movie::class, inversedBy: 'actors')]
+    #[ORM\OneToMany(targetEntity: Movie::class, mappedBy: 'director')]
     private Collection $movies;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
 
     public function __construct()
     {
@@ -83,7 +72,7 @@ class Actor
         return $this->firstname;
     }
 
-    public function setFirstname(?string $firstname): static
+    public function setFirstname(string $firstname): static
     {
         $this->firstname = $firstname;
 
@@ -95,7 +84,7 @@ class Actor
         return $this->dob;
     }
 
-    public function setDob(?\DateTime $dob): static
+    public function setDob(\DateTime $dob): static
     {
         $this->dob = $dob;
 
@@ -114,30 +103,6 @@ class Actor
         return $this;
     }
 
-    public function getBio(): ?string
-    {
-        return $this->bio;
-    }
-
-    public function setBio(?string $bio): static
-    {
-        $this->bio = $bio;
-
-        return $this;
-    }
-
-    public function getPhoto(): ?string
-    {
-        return $this->photo;
-    }
-
-    public function setPhoto(?string $photo): static
-    {
-        $this->photo = $photo;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Movie>
      */
@@ -150,6 +115,7 @@ class Actor
     {
         if (!$this->movies->contains($movie)) {
             $this->movies->add($movie);
+            $movie->setDirector($this);
         }
 
         return $this;
@@ -157,26 +123,13 @@ class Actor
 
     public function removeMovie(Movie $movie): static
     {
-        $this->movies->removeElement($movie);
+        if ($this->movies->removeElement($movie)) {
+            // set the owning side to null (unless already changed)
+            if ($movie->getDirector() === $this) {
+                $movie->setDirector(null);
+            }
+        }
 
         return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    #[ORM\PrePersist]
-    public function setCreatedAtValue(): void
-    {
-        $this->createdAt = new \DateTimeImmutable();
     }
 }
