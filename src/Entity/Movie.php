@@ -2,6 +2,9 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\MovieRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -10,6 +13,11 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MovieRepository::class)]
+#[ApiResource(
+    paginationItemsPerPage: 10 // 10 films par page
+)]
+#[ApiFilter(BooleanFilter::class, properties: ['online'])]
+#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource]
 class Movie
@@ -136,6 +144,23 @@ class Movie
     public function setCreatedAtValue(): void
     {
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+
+
+    // --- Propriété online ---
+    #[ORM\Column(type: 'boolean')]
+    private bool $online = false;
+
+    public function isOnline(): bool
+    {
+        return $this->online;
+    }
+
+    public function setOnline(bool $online): static
+    {
+        $this->online = $online;
+        return $this;
     }
 
 
