@@ -6,6 +6,11 @@ use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Patch;
 use App\Repository\MovieRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -14,13 +19,20 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: MovieRepository::class)]
-#[ApiResource(
-    paginationItemsPerPage: 10 // 10 films par page
-)]
 #[ApiFilter(BooleanFilter::class, properties: ['online'])]
 #[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
 #[ORM\HasLifecycleCallbacks]
-#[ApiResource]
+#[ApiResource(
+    operations: [
+        new Get(security: "is_granted('ROLE_USER')"),
+        new GetCollection(security: "is_granted('ROLE_USER')"),
+        new Post(security: "is_granted('ROLE_ADMIN')"),
+        new Patch(security: "is_granted('ROLE_ADMIN')"),
+        new Delete(security: "is_granted('ROLE_ADMIN')")
+    ],
+    paginationItemsPerPage: 10
+)]
+
 class Movie
 {
     #[ORM\Id]
@@ -154,8 +166,8 @@ class Movie
 
 
     // --- Propriété online ---
-    #[ORM\Column(type: 'boolean')]
-    private bool $online = false;
+    #[ORM\Column(type: 'boolean', nullable: true)]
+    private ?bool $online = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Url(message: "L'URL doit être valide.")]
@@ -168,12 +180,12 @@ class Movie
     #[ORM\ManyToOne(inversedBy: 'movies')]
     private ?Director $director = null;
 
-    public function isOnline(): bool
+    public function isOnline(): ?bool
     {
         return $this->online;
     }
 
-    public function setOnline(bool $online): static
+    public function setOnline(?bool $online): static
     {
         $this->online = $online;
         return $this;
