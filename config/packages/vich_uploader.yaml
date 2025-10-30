@@ -1,0 +1,11 @@
+# config/packages/vich_uploader.yaml
+
+vich_uploader:
+    db_driver: orm
+    metadata:
+        type: attribute
+    mappings:
+        media_object:
+            uri_prefix: /uploads/media        # URL publique pour accéder aux fichiers
+            upload_destination: '%kernel.project_dir%/public/uploads/media'  # dossier physique
+            namer: Vich\UploaderBundle\Naming\SmartUniqueNamer  # génère un nom unique
