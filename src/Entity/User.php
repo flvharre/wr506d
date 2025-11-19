@@ -17,7 +17,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ApiResource(
     operations: [
-        new Post(processor: UserPasswordHasher::class),
+        new Post(
+            security: "is_granted('PUBLIC_ACCESS')",
+            processor: UserPasswordHasher::class
+        ),
         new Put(processor: UserPasswordHasher::class)
     ],
     normalizationContext: ['groups' => ['user:read']],
