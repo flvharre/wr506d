@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
@@ -17,15 +18,27 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: MovieRepository::class)]
 #[ApiFilter(BooleanFilter::class, properties: ['online'])]
-#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
+#[ApiFilter(SearchFilter::class, properties: [
+    'name' => 'partial',
+    'director.id' => 'exact',
+    'categories.id' => 'exact'
+])]
+#[ApiFilter(DateFilter::class, properties: ['releaseDate'])]
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new Get(security: "is_granted('PUBLIC_ACCESS')"),
-        new GetCollection(security: "is_granted('PUBLIC_ACCESS')"),
+        new Get(
+            normalizationContext: ['groups' => ['movie:read']],
+            security: "is_granted('PUBLIC_ACCESS')"
+        ),
+        new GetCollection(
+            normalizationContext: ['groups' => ['movie:list']],
+            security: "is_granted('PUBLIC_ACCESS')"
+        ),
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
@@ -37,60 +50,67 @@ class Movie
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['movie:list', 'movie:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom du film est obligatoire.")]
+    #[Assert\Length(min: 2, minMessage: "Le nom doit contenir au moins 2 caractères.")]
+    #[Groups(['movie:list', 'movie:read'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['movie:list', 'movie:read'])]
     private ?string $description = null;
 
+    #[ORM\Column(name: 'released', type: Types::DATETIME_MUTABLE)]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?\DateTimeInterface $releaseDate = null;
+
     #[ORM\Column(nullable: true)]
-    #[Assert\Positive(message: "La durée doit être un nombre positif.")]
+    #[Groups(['movie:list', 'movie:read'])]
     private ?int $duration = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    #[Assert\Date(message: "La date de sortie doit être une date valide.")]
-    #[Assert\LessThanOrEqual("today", message: "La date de sortie ne peut pas être dans le futur.")]
-    private ?\DateTime $releaseDate = null;
-
     #[ORM\Column(length: 255, nullable: true)]
-    private ?string $image = null;
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?string $poster = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?float $metascore = null;
 
     #[ORM\Column]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?bool $online = null;
+
+    #[ORM\Column]
+    #[Groups(['movie:list', 'movie:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
-    // --- Relation avec MediaObject ---
-    #[ORM\OneToMany(mappedBy: 'movie', targetEntity: MediaObject::class)]
-    private Collection $mediaObjects;
+    #[ORM\ManyToOne(inversedBy: 'movies')]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?Director $director = null;
 
     /**
      * @var Collection<int, Category>
      */
     #[ORM\ManyToMany(targetEntity: Category::class, mappedBy: 'movies')]
+    #[Groups(['movie:read'])]
     private Collection $categories;
 
     /**
      * @var Collection<int, Actor>
      */
     #[ORM\ManyToMany(targetEntity: Actor::class, mappedBy: 'movies')]
+    #[Groups(['movie:read'])]
     private Collection $actors;
 
-    // --- Propriété online ---
-    #[ORM\Column(type: 'boolean', nullable: true)]
-    private ?bool $online = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\Url(message: "L'URL doit être valide.")]
-    private ?string $url = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\PositiveOrZero(message: "Le budget doit être un nombre positif ou nul.")]
-    private ?string $budget = null;
-
-    #[ORM\ManyToOne(inversedBy: 'movies')]
-    private ?Director $director = null;
+    /**
+     * @var Collection<int, MediaObject>
+     */
+    #[ORM\OneToMany(mappedBy: 'movie', targetEntity: MediaObject::class, orphanRemoval: true)]
+    #[Groups(['movie:list', 'movie:read'])]
+    private Collection $mediaObjects;
 
     public function __construct()
     {
@@ -126,6 +146,17 @@ class Movie
         return $this;
     }
 
+    public function getReleaseDate(): ?\DateTimeInterface
+    {
+        return $this->releaseDate;
+    }
+
+    public function setReleaseDate(\DateTimeInterface $releaseDate): static
+    {
+        $this->releaseDate = $releaseDate;
+        return $this;
+    }
+
     public function getDuration(): ?int
     {
         return $this->duration;
@@ -137,25 +168,36 @@ class Movie
         return $this;
     }
 
-    public function getReleaseDate(): ?\DateTime
+    public function getPoster(): ?string
     {
-        return $this->releaseDate;
+        return $this->poster;
     }
 
-    public function setReleaseDate(?\DateTime $releaseDate): static
+    public function setPoster(?string $poster): static
     {
-        $this->releaseDate = $releaseDate;
+        $this->poster = $poster;
         return $this;
     }
 
-    public function getImage(): ?string
+    public function getMetascore(): ?float
     {
-        return $this->image;
+        return $this->metascore;
     }
 
-    public function setImage(?string $image): static
+    public function setMetascore(?float $metascore): static
     {
-        $this->image = $image;
+        $this->metascore = $metascore;
+        return $this;
+    }
+
+    public function isOnline(): ?bool
+    {
+        return $this->online;
+    }
+
+    public function setOnline(bool $online): static
+    {
+        $this->online = $online;
         return $this;
     }
 
@@ -173,40 +215,9 @@ class Movie
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
-        $this->createdAt = new \DateTimeImmutable();
-    }
-
-    public function isOnline(): ?bool
-    {
-        return $this->online;
-    }
-
-    public function setOnline(?bool $online): static
-    {
-        $this->online = $online;
-        return $this;
-    }
-
-    public function getUrl(): ?string
-    {
-        return $this->url;
-    }
-
-    public function setUrl(?string $url): static
-    {
-        $this->url = $url;
-        return $this;
-    }
-
-    public function getBudget(): ?string
-    {
-        return $this->budget;
-    }
-
-    public function setBudget(?string $budget): static
-    {
-        $this->budget = $budget;
-        return $this;
+        if (!$this->createdAt) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
     }
 
     public function getDirector(): ?Director
