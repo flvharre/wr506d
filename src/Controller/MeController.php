@@ -10,19 +10,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class MeController extends AbstractController
 {
     #[Route('/api/me', name: 'get_current_user', methods: ['GET'])]
-    public function getCurrentUser(UserInterface $user): JsonResponse
+    public function getCurrentUser(?UserInterface $user): JsonResponse
     {
-        // Vérification de l'utilisateur (sécurité double-check)
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non authentifié'], 401);
-        }
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // Préparer les données à exposer
-        $userData = [
-            'email' => $user->getEmail(),
-            'roles' => $user->getRoles()
-        ];
+        $user = $this->getUser();
 
-        return new JsonResponse($userData);
+        return $this->json([
+            'id'       => $user->getId(),
+            'email'    => $user->getEmail(),
+            'username' => $user->getUsername(),
+            'roles'    => $user->getRoles(),
+        ]);
     }
 }
