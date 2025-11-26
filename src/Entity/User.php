@@ -41,7 +41,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 255)]
     #[Groups(['user:read', 'user:write'])]
-    private ?string $username = null; // Champ conservé pour l'affichage
+    private ?string $username = null;
 
     #[ORM\Column]
     #[Groups(['user:read', 'user:write'])]
@@ -56,9 +56,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
-    // ------------------------
-    // Getters & Setters
-    // ------------------------
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,11 +73,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see UserInterface
-     * FIX CRITIQUE : Retourne l'email pour l'identifiant de sécurité unique (getUserIdentifier).
-     * Ceci est crucial pour la cohérence de l'authentification par email.
-     */
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
@@ -112,9 +105,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): ?string
     {
         return $this->password;

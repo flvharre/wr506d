@@ -33,9 +33,14 @@ security:
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
     access_control:
+        # 1. Accès public aux pages de base et à la documentation (non /api)
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/auth, roles: PUBLIC_ACCESS }
+
+        # 2. Accès public aux ROUTES API spécifiques (exceptions à l'authentification)
         - { path: ^/api/users, roles: PUBLIC_ACCESS, methods: [ POST ] }
         - { path: ^/api/movies, roles: PUBLIC_ACCESS, methods: [ GET ] }
-        - { path: ^/auth, roles: PUBLIC_ACCESS }
+
+        # 3. Toutes les AUTRES routes API nécessitent une authentification (règle générale)
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

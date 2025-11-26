@@ -7,24 +7,31 @@ use App\Repository\DirectorRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: DirectorRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    normalizationContext: ['groups' => ['director:read']]
+)]
 class Director
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['director:read', 'movie:list', 'movie:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom de famille du réalisateur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le nom ne peut pas dépasser 255 caractères.")]
+    #[Groups(['director:read', 'movie:list', 'movie:read'])]
     private ?string $lastname = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le prénom du réalisateur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le prénom ne peut pas dépasser 255 caractères.")]
+    #[Groups(['director:read', 'movie:list', 'movie:read'])]
     private ?string $firstname = null;
 
     #[ORM\Column]
@@ -34,7 +41,7 @@ class Director
     #[ORM\Column(nullable: true)]
     #[Assert\LessThan("today", message: "La date de décès doit être dans le passé.")]
     #[Assert\Expression(
-        "this.getDod() === null or this.getDob() === null or this.getDod() > this.getDob()",
+        "value === null or this.getDob() === null or value > this.getDob()",
         message: "La date de décès doit être postérieure à la date de naissance."
     )]
     private ?\DateTime $dod = null;
@@ -42,13 +49,14 @@ class Director
     /**
      * @var Collection<int, Movie>
      */
-    #[ORM\OneToMany(targetEntity: Movie::class, mappedBy: 'director')]
+    #[ORM\OneToMany(mappedBy: 'director', targetEntity: Movie::class)]
     private Collection $movies;
 
     public function __construct()
     {
         $this->movies = new ArrayCollection();
     }
+
 
     public function getId(): ?int
     {
@@ -124,7 +132,6 @@ class Director
     public function removeMovie(Movie $movie): static
     {
         if ($this->movies->removeElement($movie)) {
-            // set the owning side to null (unless already changed)
             if ($movie->getDirector() === $this) {
                 $movie->setDirector(null);
             }

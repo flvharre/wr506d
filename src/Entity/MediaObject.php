@@ -60,10 +60,11 @@ use App\Entity\Actor;
 class MediaObject
 {
     #[ORM\Id, ORM\Column, ORM\GeneratedValue]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
     private ?int $id = null;
 
     #[ApiProperty(types: ['https://schema.org/contentUrl'], writable: false)]
-    #[Groups(['media_object:read'])]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
     public ?string $contentUrl = null;
 
     #[Vich\UploadableField(mapping: 'media_object', fileNameProperty: 'filePath')]
@@ -72,6 +73,7 @@ class MediaObject
 
     #[ApiProperty(writable: false)]
     #[ORM\Column(nullable: true)]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
     public ?string $filePath = null;
 
     #[ORM\ManyToOne(targetEntity: Movie::class, inversedBy: 'mediaObjects')]

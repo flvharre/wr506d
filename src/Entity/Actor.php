@@ -14,6 +14,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ActorRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -24,32 +25,36 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
-    ]
+    ],
+    normalizationContext: ['groups' => ['actor:read']]
 )]
 class Actor
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['actor:read', 'movie:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom de famille de l'acteur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le nom ne peut pas dépasser 255 caractères.")]
+    #[Groups(['actor:read', 'movie:read'])]
     private ?string $lastname = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Length(max: 255, maxMessage: "Le prénom ne peut pas dépasser 255 caractères.")]
+    #[Groups(['actor:read', 'movie:read'])]
     private ?string $firstname = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Assert\LessThan("today", message: "La date de naissance doit être dans le passé.")]
     private ?\DateTime $dob = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     #[Assert\LessThan("today", message: "La date de décès doit être dans le passé.")]
     #[Assert\Expression(
-        "this.getDod() === null or this.getDob() === null or this.getDod() > this.getDob()",
+        "value === null or this.getDob() === null or value > this.getDob()",
         message: "La date de décès doit être postérieure à la date de naissance."
     )]
     private ?\DateTime $dod = null;
@@ -57,7 +62,7 @@ class Actor
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $bio = null;
 
-    #[ORM\ManyToOne(targetEntity: MediaObject::class)]
+    #[ORM\ManyToOne(inversedBy: 'actors')]
     private ?MediaObject $photo = null;
 
     /**
@@ -87,6 +92,7 @@ class Actor
     public function setLastname(string $lastname): static
     {
         $this->lastname = $lastname;
+
         return $this;
     }
 
@@ -98,6 +104,7 @@ class Actor
     public function setFirstname(?string $firstname): static
     {
         $this->firstname = $firstname;
+
         return $this;
     }
 
@@ -106,9 +113,10 @@ class Actor
         return $this->dob;
     }
 
-    public function setDob(?\DateTime $dob): static
+    public function setDob(\DateTime $dob): static
     {
         $this->dob = $dob;
+
         return $this;
     }
 
@@ -120,6 +128,7 @@ class Actor
     public function setDod(?\DateTime $dod): static
     {
         $this->dod = $dod;
+
         return $this;
     }
 
@@ -131,6 +140,7 @@ class Actor
     public function setBio(?string $bio): static
     {
         $this->bio = $bio;
+
         return $this;
     }
 
@@ -142,6 +152,7 @@ class Actor
     public function setPhoto(?MediaObject $photo): static
     {
         $this->photo = $photo;
+
         return $this;
     }
 
@@ -158,12 +169,14 @@ class Actor
         if (!$this->movies->contains($movie)) {
             $this->movies->add($movie);
         }
+
         return $this;
     }
 
     public function removeMovie(Movie $movie): static
     {
         $this->movies->removeElement($movie);
+
         return $this;
     }
 
@@ -175,12 +188,15 @@ class Actor
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+
         return $this;
     }
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
-        $this->createdAt = new \DateTimeImmutable();
+        if (!$this->createdAt) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
     }
 }
