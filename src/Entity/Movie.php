@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Patch;
 use App\Repository\MovieRepository;
+use App\State\MovieCreateProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -40,7 +41,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
             normalizationContext: ['groups' => ['movie:list']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
-        new Post(security: "is_granted('ROLE_USER')"),
+        new Post(
+            security: "is_granted('ROLE_USER')",
+            processor: MovieCreateProcessor::class
+        ),
         new Patch(security: "is_granted('ROLE_ADMIN') or object.createdBy == user"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
     ],

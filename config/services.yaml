@@ -28,6 +28,10 @@ services:
         arguments:
             $persistProcessor: '@api_platform.doctrine.orm.state.persist_processor'
 
+    App\State\MovieCreateProcessor:
+        arguments:
+            $persistProcessor: '@api_platform.doctrine.orm.state.persist_processor'
+
     App\Encoder\MultipartDecoder:
         tags: [ 'serializer.encoder' ]
 
