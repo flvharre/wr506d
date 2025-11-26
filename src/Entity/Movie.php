@@ -24,15 +24,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new Get(security: "is_granted('ROLE_USER')"),
-        new GetCollection(security: "is_granted('ROLE_USER')"),
+        new Get(security: "is_granted('PUBLIC_ACCESS')"),
+        new GetCollection(security: "is_granted('PUBLIC_ACCESS')"),
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
     ],
     paginationItemsPerPage: 10
 )]
-
 class Movie
 {
     #[ORM\Id]
@@ -62,6 +61,10 @@ class Movie
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    // --- Relation avec MediaObject ---
+    #[ORM\OneToMany(mappedBy: 'movie', targetEntity: MediaObject::class)]
+    private Collection $mediaObjects;
+
     /**
      * @var Collection<int, Category>
      */
@@ -73,97 +76,6 @@ class Movie
      */
     #[ORM\ManyToMany(targetEntity: Actor::class, mappedBy: 'movies')]
     private Collection $actors;
-
-    public function __construct()
-    {
-        $this->categories = new ArrayCollection();
-        $this->actors = new ArrayCollection();
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
-
-    public function setName(string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(?string $description): static
-    {
-        $this->description = $description;
-
-        return $this;
-    }
-
-    public function getDuration(): ?int
-    {
-        return $this->duration;
-    }
-
-    public function setDuration(?int $duration): static
-    {
-        $this->duration = $duration;
-
-        return $this;
-    }
-
-    public function getReleaseDate(): ?\DateTime
-    {
-        return $this->releaseDate;
-    }
-
-    public function setReleaseDate(?\DateTime $releaseDate): static
-    {
-        $this->releaseDate = $releaseDate;
-
-        return $this;
-    }
-
-    public function getImage(): ?string
-    {
-        return $this->image;
-    }
-
-    public function setImage(?string $image): static
-    {
-        $this->image = $image;
-
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    #[ORM\PrePersist]
-    public function setCreatedAtValue(): void
-    {
-        $this->createdAt = new \DateTimeImmutable();
-    }
-
-
 
     // --- Propriété online ---
     #[ORM\Column(type: 'boolean', nullable: true)]
@@ -180,6 +92,90 @@ class Movie
     #[ORM\ManyToOne(inversedBy: 'movies')]
     private ?Director $director = null;
 
+    public function __construct()
+    {
+        $this->categories = new ArrayCollection();
+        $this->actors = new ArrayCollection();
+        $this->mediaObjects = new ArrayCollection();
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): static
+    {
+        $this->description = $description;
+        return $this;
+    }
+
+    public function getDuration(): ?int
+    {
+        return $this->duration;
+    }
+
+    public function setDuration(?int $duration): static
+    {
+        $this->duration = $duration;
+        return $this;
+    }
+
+    public function getReleaseDate(): ?\DateTime
+    {
+        return $this->releaseDate;
+    }
+
+    public function setReleaseDate(?\DateTime $releaseDate): static
+    {
+        $this->releaseDate = $releaseDate;
+        return $this;
+    }
+
+    public function getImage(): ?string
+    {
+        return $this->image;
+    }
+
+    public function setImage(?string $image): static
+    {
+        $this->image = $image;
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    #[ORM\PrePersist]
+    public function setCreatedAtValue(): void
+    {
+        $this->createdAt = new \DateTimeImmutable();
+    }
+
     public function isOnline(): ?bool
     {
         return $this->online;
@@ -191,6 +187,38 @@ class Movie
         return $this;
     }
 
+    public function getUrl(): ?string
+    {
+        return $this->url;
+    }
+
+    public function setUrl(?string $url): static
+    {
+        $this->url = $url;
+        return $this;
+    }
+
+    public function getBudget(): ?string
+    {
+        return $this->budget;
+    }
+
+    public function setBudget(?string $budget): static
+    {
+        $this->budget = $budget;
+        return $this;
+    }
+
+    public function getDirector(): ?Director
+    {
+        return $this->director;
+    }
+
+    public function setDirector(?Director $director): static
+    {
+        $this->director = $director;
+        return $this;
+    }
 
     /**
      * @return Collection<int, Category>
@@ -206,7 +234,6 @@ class Movie
             $this->categories->add($category);
             $category->addMovie($this);
         }
-
         return $this;
     }
 
@@ -215,7 +242,6 @@ class Movie
         if ($this->categories->removeElement($category)) {
             $category->removeMovie($this);
         }
-
         return $this;
     }
 
@@ -233,7 +259,6 @@ class Movie
             $this->actors->add($actor);
             $actor->addMovie($this);
         }
-
         return $this;
     }
 
@@ -242,43 +267,33 @@ class Movie
         if ($this->actors->removeElement($actor)) {
             $actor->removeMovie($this);
         }
-
         return $this;
     }
 
-    public function getUrl(): ?string
+    /**
+     * @return Collection<int, MediaObject>
+     */
+    public function getMediaObjects(): Collection
     {
-        return $this->url;
+        return $this->mediaObjects;
     }
 
-    public function setUrl(?string $url): static
+    public function addMediaObject(MediaObject $mediaObject): static
     {
-        $this->url = $url;
-
+        if (!$this->mediaObjects->contains($mediaObject)) {
+            $this->mediaObjects->add($mediaObject);
+            $mediaObject->setMovie($this);
+        }
         return $this;
     }
 
-    public function getBudget(): ?string
+    public function removeMediaObject(MediaObject $mediaObject): static
     {
-        return $this->budget;
-    }
-
-    public function setBudget(?string $budget): static
-    {
-        $this->budget = $budget;
-
-        return $this;
-    }
-
-    public function getDirector(): ?Director
-    {
-        return $this->director;
-    }
-
-    public function setDirector(?Director $director): static
-    {
-        $this->director = $director;
-
+        if ($this->mediaObjects->removeElement($mediaObject)) {
+            if ($mediaObject->getMovie() === $this) {
+                $mediaObject->setMovie(null);
+            }
+        }
         return $this;
     }
 }

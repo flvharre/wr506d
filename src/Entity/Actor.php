@@ -57,8 +57,8 @@ class Actor
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $bio = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $photo = null;
+    #[ORM\ManyToOne(targetEntity: MediaObject::class)]
+    private ?MediaObject $photo = null;
 
     /**
      * @var Collection<int, Movie>
@@ -87,7 +87,6 @@ class Actor
     public function setLastname(string $lastname): static
     {
         $this->lastname = $lastname;
-
         return $this;
     }
 
@@ -99,7 +98,6 @@ class Actor
     public function setFirstname(?string $firstname): static
     {
         $this->firstname = $firstname;
-
         return $this;
     }
 
@@ -111,7 +109,6 @@ class Actor
     public function setDob(?\DateTime $dob): static
     {
         $this->dob = $dob;
-
         return $this;
     }
 
@@ -123,7 +120,6 @@ class Actor
     public function setDod(?\DateTime $dod): static
     {
         $this->dod = $dod;
-
         return $this;
     }
 
@@ -135,19 +131,17 @@ class Actor
     public function setBio(?string $bio): static
     {
         $this->bio = $bio;
-
         return $this;
     }
 
-    public function getPhoto(): ?string
+    public function getPhoto(): ?MediaObject
     {
         return $this->photo;
     }
 
-    public function setPhoto(?string $photo): static
+    public function setPhoto(?MediaObject $photo): static
     {
         $this->photo = $photo;
-
         return $this;
     }
 
@@ -164,14 +158,12 @@ class Actor
         if (!$this->movies->contains($movie)) {
             $this->movies->add($movie);
         }
-
         return $this;
     }
 
     public function removeMovie(Movie $movie): static
     {
         $this->movies->removeElement($movie);
-
         return $this;
     }
 
@@ -183,7 +175,6 @@ class Actor
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
