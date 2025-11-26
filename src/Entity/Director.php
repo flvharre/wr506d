@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Repository\DirectorRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,6 +14,16 @@ use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: DirectorRepository::class)]
 #[ApiResource(
+    operations: [
+        new Get(
+            normalizationContext: ['groups' => ['director:read']],
+            security: "is_granted('PUBLIC_ACCESS')" // ACCÈS PUBLIC
+        ),
+        new GetCollection(
+            normalizationContext: ['groups' => ['director:read']],
+            security: "is_granted('PUBLIC_ACCESS')" // ACCÈS PUBLIC
+        ),
+    ],
     normalizationContext: ['groups' => ['director:read']]
 )]
 class Director

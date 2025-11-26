@@ -25,7 +25,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ApiFilter(SearchFilter::class, properties: [
     'name' => 'partial',
     'director.id' => 'exact',
-    'categories.id' => 'exact'
+    'categories.id' => 'exact',
+    'createdBy.id' => 'exact'
 ])]
 #[ApiFilter(DateFilter::class, properties: ['releaseDate'])]
 #[ORM\HasLifecycleCallbacks]
@@ -39,8 +40,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
             normalizationContext: ['groups' => ['movie:list']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
-        new Post(security: "is_granted('ROLE_ADMIN')"),
-        new Patch(security: "is_granted('ROLE_ADMIN')"),
+        new Post(security: "is_granted('ROLE_USER')"),
+        new Patch(security: "is_granted('ROLE_ADMIN') or object.createdBy == user"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
     ],
     paginationItemsPerPage: 10
@@ -91,11 +92,15 @@ class Movie
     #[Groups(['movie:list', 'movie:read'])]
     private ?Director $director = null;
 
+    #[ORM\ManyToOne(inversedBy: 'movies')]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?User $createdBy = null;
+
     /**
      * @var Collection<int, Category>
      */
     #[ORM\ManyToMany(targetEntity: Category::class, mappedBy: 'movies')]
-    #[Groups(['movie:read'])]
+    #[Groups(['movie:list', 'movie:read'])]
     private Collection $categories;
 
     /**
@@ -112,11 +117,19 @@ class Movie
     #[Groups(['movie:list', 'movie:read'])]
     private Collection $mediaObjects;
 
+    /**
+     * @var Collection<int, Comment>
+     */
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'movie', orphanRemoval: true)]
+    #[Groups(['movie:read'])]
+    private Collection $comments;
+
     public function __construct()
     {
         $this->categories = new ArrayCollection();
         $this->actors = new ArrayCollection();
         $this->mediaObjects = new ArrayCollection();
+        $this->comments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -231,6 +244,17 @@ class Movie
         return $this;
     }
 
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
+
     /**
      * @return Collection<int, Category>
      */
@@ -303,6 +327,33 @@ class Movie
         if ($this->mediaObjects->removeElement($mediaObject)) {
             if ($mediaObject->getMovie() === $this) {
                 $mediaObject->setMovie(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Comment>
+     */
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(Comment $comment): static
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setMovie($this);
+        }
+        return $this;
+    }
+
+    public function removeComment(Comment $comment): static
+    {
+        if ($this->comments->removeElement($comment)) {
+            if ($comment->getMovie() === $this) {
+                $comment->setMovie(null);
             }
         }
         return $this;

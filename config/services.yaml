@@ -24,6 +24,10 @@ services:
         bind:
             $processor: '@api_platform.doctrine.orm.state.persist_processor'
 
+    App\State\CommentCreateProcessor:
+        arguments:
+            $persistProcessor: '@api_platform.doctrine.orm.state.persist_processor'
+
     App\Encoder\MultipartDecoder:
         tags: [ 'serializer.encoder' ]
 
