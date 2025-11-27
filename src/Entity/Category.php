@@ -44,7 +44,7 @@ class Category
     /**
      * @var Collection<int, Movie>
      */
-    #[ORM\ManyToMany(targetEntity: Movie::class, inversedBy: 'categories')]
+    #[ORM\ManyToMany(targetEntity: Movie::class, mappedBy: 'categories')]
     private Collection $movies;
 
     #[ORM\Column]

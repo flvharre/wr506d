@@ -43,8 +43,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
         ),
         new Post(
             security: "is_granted('ROLE_USER')",
-            processor: MovieCreateProcessor::class,
-            input: \App\Dto\MovieInput::class // fortement recommandé pour l'upload
+            processor: MovieCreateProcessor::class
         ),
         new Patch(
             security: "is_granted('ROLE_ADMIN') or object.getCreatedBy() == user",
@@ -83,13 +82,17 @@ class Movie
     #[Groups(['movie:list', 'movie:read'])]
     private ?int $duration = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?string $poster = null;
+
     #[ORM\Column(nullable: true)]
     #[Groups(['movie:list', 'movie:read'])]
     private ?float $metascore = null;
 
     #[ORM\Column]
     #[Groups(['movie:list', 'movie:read'])]
-    private ?bool $online = false;
+    private ?bool $online = null;
 
     #[ORM\Column]
     #[Groups(['movie:list', 'movie:read'])]
@@ -118,11 +121,12 @@ class Movie
     private Collection $actors;
 
     /**
-     * UNE SEULE AFFICHE PAR FILM → OneToOne
+     * @var Collection<int, MediaObject>
      */
-    #[ORM\OneToOne(mappedBy: 'movie', targetEntity: MediaObject::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
-    #[Groups(['movie:read', 'movie:write'])]
-    private ?MediaObject $poster = null;
+    #[ORM\OneToMany(targetEntity: MediaObject::class, mappedBy: 'movie', orphanRemoval: true)]
+    #[ORM\OrderBy(['createdAt' => 'DESC'])]
+    #[Groups(['movie:list', 'movie:read'])]
+    private Collection $mediaObjects;
 
     /**
      * @var Collection<int, Comment>
@@ -135,8 +139,8 @@ class Movie
     {
         $this->categories = new ArrayCollection();
         $this->actors = new ArrayCollection();
+        $this->mediaObjects = new ArrayCollection();
         $this->comments = new ArrayCollection();
-        $this->online = false;
     }
 
     public function getId(): ?int
@@ -188,6 +192,17 @@ class Movie
         return $this;
     }
 
+    public function getPoster(): ?string
+    {
+        return $this->poster;
+    }
+
+    public function setPoster(?string $poster): static
+    {
+        $this->poster = $poster;
+        return $this;
+    }
+
     public function getMetascore(): ?float
     {
         return $this->metascore;
@@ -213,6 +228,12 @@ class Movie
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
     }
 
     #[ORM\PrePersist]
@@ -245,30 +266,9 @@ class Movie
         return $this;
     }
 
-    // === GESTION DE L'AFFICHE (NOUVEAU) ===
-
-    public function getPoster(): ?MediaObject
-    {
-        return $this->poster;
-    }
-
-    public function setPoster(?MediaObject $poster): static
-    {
-        // Si un ancien poster existe, on le dissocie
-        if ($this->poster && $this->poster !== $poster) {
-            $this->poster->setMovie(null);
-        }
-
-        $this->poster = $poster;
-
-        if ($poster) {
-            $poster->setMovie($this);
-        }
-
-        return $this;
-    }
-
-    // === CATEGORIES ===
+    /**
+     * @return Collection<int, Category>
+     */
     public function getCategories(): Collection
     {
         return $this->categories;
@@ -291,7 +291,9 @@ class Movie
         return $this;
     }
 
-    // === ACTEURS ===
+    /**
+     * @return Collection<int, Actor>
+     */
     public function getActors(): Collection
     {
         return $this->actors;
@@ -314,7 +316,36 @@ class Movie
         return $this;
     }
 
-    // === COMMENTAIRES ===
+    /**
+     * @return Collection<int, MediaObject>
+     */
+    public function getMediaObjects(): Collection
+    {
+        return $this->mediaObjects;
+    }
+
+    public function addMediaObject(MediaObject $mediaObject): static
+    {
+        if (!$this->mediaObjects->contains($mediaObject)) {
+            $this->mediaObjects->add($mediaObject);
+            $mediaObject->setMovie($this);
+        }
+        return $this;
+    }
+
+    public function removeMediaObject(MediaObject $mediaObject): static
+    {
+        if ($this->mediaObjects->removeElement($mediaObject)) {
+            if ($mediaObject->getMovie() === $this) {
+                $mediaObject->setMovie(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Comment>
+     */
     public function getComments(): Collection
     {
         return $this->comments;
@@ -332,7 +363,9 @@ class Movie
     public function removeComment(Comment $comment): static
     {
         if ($this->comments->removeElement($comment)) {
-            $comment->setMovie(null);
+            if ($comment->getMovie() === $this) {
+                $comment->setMovie(null);
+            }
         }
         return $this;
     }
