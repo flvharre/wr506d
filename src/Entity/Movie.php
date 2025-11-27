@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Patch;
 use App\Repository\MovieRepository;
+use App\State\MovieCreateProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -25,7 +26,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ApiFilter(SearchFilter::class, properties: [
     'name' => 'partial',
     'director.id' => 'exact',
-    'categories.id' => 'exact'
+    'categories.id' => 'exact',
+    'createdBy.id' => 'exact'
 ])]
 #[ApiFilter(DateFilter::class, properties: ['releaseDate'])]
 #[ORM\HasLifecycleCallbacks]
@@ -39,9 +41,18 @@ use Symfony\Component\Serializer\Annotation\Groups;
             normalizationContext: ['groups' => ['movie:list']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
-        new Post(security: "is_granted('ROLE_ADMIN')"),
-        new Patch(security: "is_granted('ROLE_ADMIN')"),
-        new Delete(security: "is_granted('ROLE_ADMIN')")
+        new Post(
+            security: "is_granted('ROLE_USER')",
+            processor: MovieCreateProcessor::class
+        ),
+        new Patch(
+            security: "is_granted('ROLE_ADMIN') or object.getCreatedBy() == user",
+            securityMessage: "Seul l'administrateur ou l'auteur du film peut le modifier."
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN') or object.getCreatedBy() == user",
+            securityMessage: "Seul l'administrateur ou l'auteur du film peut le supprimer."
+        ),
     ],
     paginationItemsPerPage: 10
 )]
@@ -91,11 +102,15 @@ class Movie
     #[Groups(['movie:list', 'movie:read'])]
     private ?Director $director = null;
 
+    #[ORM\ManyToOne(inversedBy: 'movies')]
+    #[Groups(['movie:list', 'movie:read'])]
+    private ?User $createdBy = null;
+
     /**
      * @var Collection<int, Category>
      */
-    #[ORM\ManyToMany(targetEntity: Category::class, mappedBy: 'movies')]
-    #[Groups(['movie:read'])]
+    #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'movies')]
+    #[Groups(['movie:list', 'movie:read'])]
     private Collection $categories;
 
     /**
@@ -108,15 +123,24 @@ class Movie
     /**
      * @var Collection<int, MediaObject>
      */
-    #[ORM\OneToMany(mappedBy: 'movie', targetEntity: MediaObject::class, orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: MediaObject::class, mappedBy: 'movie', orphanRemoval: true)]
+    #[ORM\OrderBy(['createdAt' => 'DESC'])]
     #[Groups(['movie:list', 'movie:read'])]
     private Collection $mediaObjects;
+
+    /**
+     * @var Collection<int, Comment>
+     */
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'movie', orphanRemoval: true)]
+    #[Groups(['movie:read'])]
+    private Collection $comments;
 
     public function __construct()
     {
         $this->categories = new ArrayCollection();
         $this->actors = new ArrayCollection();
         $this->mediaObjects = new ArrayCollection();
+        $this->comments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -231,6 +255,17 @@ class Movie
         return $this;
     }
 
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
+
     /**
      * @return Collection<int, Category>
      */
@@ -303,6 +338,33 @@ class Movie
         if ($this->mediaObjects->removeElement($mediaObject)) {
             if ($mediaObject->getMovie() === $this) {
                 $mediaObject->setMovie(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Comment>
+     */
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(Comment $comment): static
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setMovie($this);
+        }
+        return $this;
+    }
+
+    public function removeComment(Comment $comment): static
+    {
+        if ($this->comments->removeElement($comment)) {
+            if ($comment->getMovie() === $this) {
+                $comment->setMovie(null);
             }
         }
         return $this;

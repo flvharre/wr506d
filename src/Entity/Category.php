@@ -13,34 +13,38 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Patch;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new Get(security: "is_granted('ROLE_USER')"),
-        new GetCollection(security: "is_granted('ROLE_USER')"),
+        new Get(security: "is_granted('PUBLIC_ACCESS')"),
+        new GetCollection(security: "is_granted('PUBLIC_ACCESS')"),
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
-    ]
+    ],
+    normalizationContext: ['groups' => ['category:read']]
 )]
 class Category
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['category:read', 'movie:list', 'movie:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom de la catégorie est obligatoire.")]
+    #[Groups(['category:read', 'movie:list', 'movie:read'])]
     private ?string $name = null;
 
     /**
      * @var Collection<int, Movie>
      */
-    #[ORM\ManyToMany(targetEntity: Movie::class, inversedBy: 'categories')]
+    #[ORM\ManyToMany(targetEntity: Movie::class, mappedBy: 'categories')]
     private Collection $movies;
 
     #[ORM\Column]

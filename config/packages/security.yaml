@@ -41,6 +41,9 @@ security:
         # 2. Accès public aux ROUTES API spécifiques (exceptions à l'authentification)
         - { path: ^/api/users, roles: PUBLIC_ACCESS, methods: [ POST ] }
         - { path: ^/api/movies, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/actors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/directors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [ GET ] }
 
         # 3. Toutes les AUTRES routes API nécessitent une authentification (règle générale)
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
