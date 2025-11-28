@@ -2,6 +2,10 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
 use App\Repository\UserRepository;
 use App\State\UserPasswordHasher;
 use ApiPlatform\Metadata\ApiResource;
@@ -24,7 +28,14 @@ use Symfony\Component\Security\Core\User\UserInterface;
             security: "is_granted('PUBLIC_ACCESS')",
             processor: UserPasswordHasher::class
         ),
-        new Put(processor: UserPasswordHasher::class)
+        new Put(processor: UserPasswordHasher::class),
+        new Get (security: "is_granted('ROLE_ADMIN')"),
+        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
+        new Patch(
+            security: "is_granted('ROLE_ADMIN')",
+//            processor: UserPasswordHasher::class
+        ),
+        new Delete(security: "is_granted('ROLE_ADMIN')"),
     ],
     normalizationContext: ['groups' => ['user:read']],
     denormalizationContext: ['groups' => ['user:write']]
@@ -56,6 +67,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $plainPassword = null;
 
     #[ORM\Column]
+    #[Groups(['user:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     /**

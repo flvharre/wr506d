@@ -22,7 +22,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: MovieRepository::class)]
-#[ApiFilter(BooleanFilter::class, properties: ['online'])]
 #[ApiFilter(SearchFilter::class, properties: [
     'name' => 'partial',
     'director.id' => 'exact',
@@ -61,13 +60,13 @@ class Movie
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['movie:list', 'movie:read'])]
+    #[Groups(['movie:list', 'movie:read', 'comment:list'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom du film est obligatoire.")]
     #[Assert\Length(min: 2, minMessage: "Le nom doit contenir au moins 2 caractères.")]
-    #[Groups(['movie:list', 'movie:read'])]
+    #[Groups(['movie:list', 'movie:read', 'comment:list'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -89,10 +88,6 @@ class Movie
     #[ORM\Column(nullable: true)]
     #[Groups(['movie:list', 'movie:read'])]
     private ?float $metascore = null;
-
-    #[ORM\Column]
-    #[Groups(['movie:list', 'movie:read'])]
-    private ?bool $online = null;
 
     #[ORM\Column]
     #[Groups(['movie:list', 'movie:read'])]
@@ -211,17 +206,6 @@ class Movie
     public function setMetascore(?float $metascore): static
     {
         $this->metascore = $metascore;
-        return $this;
-    }
-
-    public function isOnline(): ?bool
-    {
-        return $this->online;
-    }
-
-    public function setOnline(bool $online): static
-    {
-        $this->online = $online;
         return $this;
     }
 
