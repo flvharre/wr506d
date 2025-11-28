@@ -45,5 +45,14 @@ security:
         - { path: ^/api/directors, roles: PUBLIC_ACCESS, methods: [ GET ] }
         - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [ GET ] }
 
-        # 3. Toutes les AUTRES routes API nécessitent une authentification (règle générale)
+        # 3. Routes admin
+        - { path: ^/api/users, roles: ROLE_ADMIN, methods: [ GET, PATCH, DELETE ] }
+
+        # 4. Toutes les AUTRES routes API nécessitent une authentification (règle générale)
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+#    access_control:
+#        # Garder seulement ces 3 lignes
+#        - { path: ^/$, roles: PUBLIC_ACCESS }
+#        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+#        - { path: ^/auth, roles: PUBLIC_ACCESS }
