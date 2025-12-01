@@ -13,8 +13,7 @@ final class MovieCreateProcessor implements ProcessorInterface
     public function __construct(
         private readonly Security           $security,
         private readonly ProcessorInterface $persistProcessor
-    )
-    {
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed

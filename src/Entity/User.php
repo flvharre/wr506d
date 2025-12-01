@@ -29,11 +29,11 @@ use Symfony\Component\Security\Core\User\UserInterface;
             processor: UserPasswordHasher::class
         ),
         new Put(processor: UserPasswordHasher::class),
-        new Get (security: "is_granted('ROLE_ADMIN')"),
+        new Get(security: "is_granted('ROLE_ADMIN')"),
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new Patch(
             security: "is_granted('ROLE_ADMIN')",
-//            processor: UserPasswordHasher::class
+            //            processor: UserPasswordHasher::class
         ),
         new Delete(security: "is_granted('ROLE_ADMIN')"),
     ],
