@@ -122,4 +122,9 @@ class MediaObject
         $this->actor = $actor;
         return $this;
     }
+
+    public function getFilePath(): ?string
+    {
+        return $this->filePath;
+    }
 }
