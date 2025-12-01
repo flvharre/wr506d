@@ -50,7 +50,7 @@
         "symfony/yaml": "7.3.*",
         "twig/extra-bundle": "^2.12|^3.0",
         "twig/twig": "^2.12|^3.0",
-        "vich/uploader-bundle": "^2.8",
+        "vich/uploader-bundle": "^2.0",
         "webonyx/graphql-php": "^15.24",
         "xylis/faker-cinema-providers": "^2.0"
     },
