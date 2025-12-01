@@ -39,3 +39,7 @@ services:
         tags: [ 'serializer.normalizer' ]
 
     App\Serializer\MediaObjectNormalizer: ~
+
+    App\Command\StatsCommand:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
