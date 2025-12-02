@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -68,7 +69,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     #[Groups(['user:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
 
     /**
      * @var Collection<int, Movie>
@@ -160,12 +161,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->plainPassword = null;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
         return $this;
@@ -175,7 +176,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCreatedAtValue(): void
     {
         if (!$this->createdAt) {
-            $this->createdAt = new \DateTimeImmutable();
+            $this->createdAt = new DateTimeImmutable();
         }
     }
 

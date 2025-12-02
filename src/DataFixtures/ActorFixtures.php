@@ -12,7 +12,9 @@ class ActorFixtures extends Fixture
 {
     public function load(ObjectManager $manager): void
     {
-        $faker = Factory::create();
+        $factory = new Factory();
+        $faker = $factory->create();
+
         $faker->addProvider(new Person($faker));
 
         /**

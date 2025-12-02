@@ -7,6 +7,7 @@ namespace App\State;
 use App\Entity\Comment;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final class CommentCreateProcessor implements ProcessorInterface
@@ -28,7 +29,7 @@ final class CommentCreateProcessor implements ProcessorInterface
         $user = $this->security->getUser();
 
         if (!$user instanceof \App\Entity\User) {
-            throw new \RuntimeException('Vous devez être connecté pour commenter');
+            throw new RuntimeException('Vous devez être connecté pour commenter');
         }
 
         // On associe automatiquement l'auteur

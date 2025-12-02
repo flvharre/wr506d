@@ -31,6 +31,8 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/vich/uploader-bundle" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/phpstan/phpstan" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/squizlabs/php_codesniffer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/pdepend/pdepend" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/phpmd/phpmd" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

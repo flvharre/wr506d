@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Delete;
 use App\Repository\CommentRepository;
 use App\State\CommentCreateProcessor;
 use Doctrine\DBAL\Types\Types;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -58,7 +59,7 @@ class Comment
 
     #[ORM\Column]
     #[Groups(['comment:read', 'comment:list', 'movie:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
@@ -74,7 +75,7 @@ class Comment
     public function setCreatedAtValue(): void
     {
         if (!$this->createdAt) {
-            $this->createdAt = new \DateTimeImmutable();
+            $this->createdAt = new DateTimeImmutable();
         }
     }
 
@@ -94,7 +95,7 @@ class Comment
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }

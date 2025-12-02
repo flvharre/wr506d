@@ -17,6 +17,7 @@ use App\State\MovieCreateProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -91,7 +92,7 @@ class Movie
 
     #[ORM\Column]
     #[Groups(['movie:list', 'movie:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'movies')]
     #[Groups(['movie:list', 'movie:read'])]
@@ -209,12 +210,12 @@ class Movie
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
         return $this;
@@ -224,7 +225,7 @@ class Movie
     public function setCreatedAtValue(): void
     {
         if (!$this->createdAt) {
-            $this->createdAt = new \DateTimeImmutable();
+            $this->createdAt = new DateTimeImmutable();
         }
     }
 
