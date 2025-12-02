@@ -1,0 +1,15 @@
+parameters:
+    level: 2
+    paths:
+        - src
+    ignoreErrors:
+        # Ignorer les méthodes du provider FakerCinema Person
+        - '#Call to an undefined method Faker\\Generator::actors\(\)\.#'
+        - '#Call to an undefined method Faker\\Generator::directors\(\)\.#'
+
+        # Ignorer les méthodes du provider FakerCinema Movie
+        - '#Call to an undefined method Faker\\Generator::movies\(\)\.#'
+
+        # Ignorer les propriétés du provider FakerCinema
+        - '#Access to an undefined property Faker\\Generator::\$movieGenre\.#'
+        - '#Access to an undefined property Faker\\Generator::\$overview\.#'

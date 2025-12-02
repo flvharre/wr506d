@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -29,11 +30,11 @@ use Symfony\Component\Security\Core\User\UserInterface;
             processor: UserPasswordHasher::class
         ),
         new Put(processor: UserPasswordHasher::class),
-        new Get (security: "is_granted('ROLE_ADMIN')"),
+        new Get(security: "is_granted('ROLE_ADMIN')"),
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new Patch(
             security: "is_granted('ROLE_ADMIN')",
-//            processor: UserPasswordHasher::class
+            //            processor: UserPasswordHasher::class
         ),
         new Delete(security: "is_granted('ROLE_ADMIN')"),
     ],
@@ -68,7 +69,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     #[Groups(['user:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?DateTimeImmutable $createdAt = null;
 
     /**
      * @var Collection<int, Movie>
@@ -160,12 +161,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->plainPassword = null;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
         return $this;
@@ -175,7 +176,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCreatedAtValue(): void
     {
         if (!$this->createdAt) {
-            $this->createdAt = new \DateTimeImmutable();
+            $this->createdAt = new DateTimeImmutable();
         }
     }
 

@@ -6,6 +6,7 @@ namespace App\State;
 use App\Entity\Movie;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final class MovieCreateProcessor implements ProcessorInterface
@@ -13,8 +14,7 @@ final class MovieCreateProcessor implements ProcessorInterface
     public function __construct(
         private readonly Security           $security,
         private readonly ProcessorInterface $persistProcessor
-    )
-    {
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
@@ -28,7 +28,7 @@ final class MovieCreateProcessor implements ProcessorInterface
         $user = $this->security->getUser();
 
         if (!$user instanceof \App\Entity\User) {
-            throw new \RuntimeException('Vous devez être connecté pour créer un film');
+            throw new RuntimeException('Vous devez être connecté pour créer un film');
         }
 
         // On associe automatiquement le créateur
