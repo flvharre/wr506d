@@ -66,19 +66,39 @@ class Movie
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom du film est obligatoire.")]
-    #[Assert\Length(min: 2, minMessage: "Le nom doit contenir au moins 2 caractères.")]
+    #[Assert\Length(
+        min: 2,
+        max: 255,
+        minMessage: "Le nom doit contenir au moins {{ limit }} caractères.",
+        maxMessage: "Le nom ne peut pas dépasser {{ limit }} caractères."
+    )]
     #[Groups(['movie:list', 'movie:read', 'comment:list'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\Length(
+        max: 5000,
+        maxMessage: "La description ne peut pas dépasser {{ limit }} caractères."
+    )]
     #[Groups(['movie:list', 'movie:read'])]
     private ?string $description = null;
 
     #[ORM\Column(name: 'released', type: Types::DATETIME_MUTABLE)]
+    #[Assert\NotNull(message: "La date de sortie est obligatoire.")]
+    #[Assert\LessThanOrEqual(
+        value: "today",
+        message: "La date de sortie ne peut pas être dans le futur."
+    )]
     #[Groups(['movie:list', 'movie:read'])]
     private ?\DateTimeInterface $releaseDate = null;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\Positive(message: "La durée doit être positive.")]
+    #[Assert\Range(
+        min: 1,
+        max: 600,
+        notInRangeMessage: "La durée doit être entre {{ min }} et {{ max }} minutes."
+    )]
     #[Groups(['movie:list', 'movie:read'])]
     private ?int $duration = null;
 
@@ -87,6 +107,11 @@ class Movie
     private ?string $poster = null;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\Range(
+        min: 0,
+        max: 100,
+        notInRangeMessage: "Le metascore doit être entre {{ min }} et {{ max }}."
+    )]
     #[Groups(['movie:list', 'movie:read'])]
     private ?float $metascore = null;
 

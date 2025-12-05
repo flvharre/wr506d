@@ -38,7 +38,7 @@ jobs:
             - name: Execute tests (Unit and Feature tests) via PHPUnit
               env:
                   DATABASE_URL: sqlite:///%kernel.project_dir%/data/database.sqlite
-                  CORS_ALLOW_ORIGIN: '*'   # ajout pour éviter l'erreur
+                  CORS_ALLOW_ORIGIN: '*'
               run: vendor/bin/phpunit
             - name: Run PHP_CodeSniffer
               run: vendor/bin/phpcs --standard=PSR2 src/
