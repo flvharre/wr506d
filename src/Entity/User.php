@@ -18,11 +18,15 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+#[UniqueEntity(fields: ['email'], message: 'Cet email est déjà utilisé.')]
+#[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur est déjà pris.")]
 #[ApiResource(
     operations: [
         new Post(
@@ -34,7 +38,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new Patch(
             security: "is_granted('ROLE_ADMIN')",
-            //            processor: UserPasswordHasher::class
+            processor: UserPasswordHasher::class
         ),
         new Delete(security: "is_granted('ROLE_ADMIN')"),
     ],
@@ -50,10 +54,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Assert\NotBlank(message: "L'email est obligatoire.")]
+    #[Assert\Email(message: "L'email '{{ value }}' n'est pas valide.")]
+    #[Assert\Length(max: 180, maxMessage: "L'email ne peut pas dépasser {{ limit }} caractères.")]
     #[Groups(['user:read', 'user:write'])]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le nom d'utilisateur est obligatoire.")]
+    #[Assert\Length(
+        min: 3,
+        max: 255,
+        minMessage: "Le nom d'utilisateur doit contenir au moins {{ limit }} caractères.",
+        maxMessage: "Le nom d'utilisateur ne peut pas dépasser {{ limit }} caractères."
+    )]
+    #[Assert\Regex(
+        pattern: '/^[a-zA-Z0-9_-]+$/',
+        message: "Le nom d'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores."
+    )]
     #[Groups(['user:read', 'user:write', 'comment:read', 'comment:list', 'movie:read', 'movie:list'])]
     private ?string $username = null;
 
@@ -64,6 +82,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    #[Assert\NotBlank(message: "Le mot de passe est obligatoire.", groups: ['create'])]
+    #[Assert\Length(
+        min: 8,
+        max: 255,
+        minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères.",
+        maxMessage: "Le mot de passe ne peut pas dépasser {{ limit }} caractères."
+    )]
+    #[Assert\Regex(
+        pattern: '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/',
+        message: "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.",
+        groups: ['create']
+    )]
     #[Groups(['user:write'])]
     private ?string $plainPassword = null;
 
@@ -124,7 +154,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        $roles[] = 'ROLE_USER';
+        $roles[] = 'ROLE_AUTHOR';
         return array_unique($roles);
     }
 

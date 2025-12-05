@@ -1,7 +1,8 @@
 security:
     role_hierarchy:
-        ROLE_USER: [ ROLE_MEMBER ]
-        ROLE_ADMIN: [ ROLE_USER ]
+        ROLE_AUTHOR: [ ROLE_MEMBER ]
+        ROLE_EDITOR: [ ROLE_AUTHOR ]
+        ROLE_ADMIN: [ ROLE_EDITOR ]
 
     password_hashers:
         App\Entity\User: 'auto'
