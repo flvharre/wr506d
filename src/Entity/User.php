@@ -34,8 +34,14 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             processor: UserPasswordHasher::class
         ),
         new Put(processor: UserPasswordHasher::class),
-        new Get(security: "is_granted('ROLE_ADMIN')"),
-        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
+        new Get(
+            normalizationContext: ['groups' => ['user:read']],
+            security: "is_granted('ROLE_ADMIN')"
+        ),
+        new GetCollection(
+            normalizationContext: ['groups' => ['user:list']],
+            security: "is_granted('PUBLIC_ACCESS')"
+        ),
         new Patch(
             security: "is_granted('ROLE_ADMIN')",
             processor: UserPasswordHasher::class
@@ -50,7 +56,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read', 'comment:read', 'comment:list', 'movie:read', 'movie:list'])]
+    #[Groups(['user:read', 'user:list', 'comment:read', 'comment:list', 'movie:read', 'movie:list'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
@@ -72,27 +78,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         pattern: '/^[a-zA-Z0-9_-]+$/',
         message: "Le nom d'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores."
     )]
-    #[Groups(['user:read', 'user:write', 'comment:read', 'comment:list', 'movie:read', 'movie:list'])]
+    #[Groups(['user:read', 'user:write', 'user:list', 'comment:read', 'comment:list', 'movie:read', 'movie:list'])]
     private ?string $username = null;
 
     #[ORM\Column]
-    #[Groups(['user:read', 'user:write'])]
-    private array $roles = [];
+    #[Groups(['user:read', 'user:write', 'user:list'])]
+    private array $roles = ['ROLE_AUTHOR'];
 
     #[ORM\Column]
     private ?string $password = null;
 
     #[Assert\NotBlank(message: "Le mot de passe est obligatoire.", groups: ['create'])]
     #[Assert\Length(
-        min: 8,
+        min: 4,
         max: 255,
         minMessage: "Le mot de passe doit contenir au moins {{ limit }} caractères.",
         maxMessage: "Le mot de passe ne peut pas dépasser {{ limit }} caractères."
-    )]
-    #[Assert\Regex(
-        pattern: '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/',
-        message: "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.",
-        groups: ['create']
     )]
     #[Groups(['user:write'])]
     private ?string $plainPassword = null;
@@ -104,19 +105,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, Movie>
      */
-    #[ORM\OneToMany(targetEntity: Movie::class, mappedBy: 'createdBy')]
+    #[ORM\OneToMany(targetEntity: Movie::class, mappedBy: 'createdBy', cascade: ['remove'], orphanRemoval: true)]
     private Collection $movies;
 
     /**
      * @var Collection<int, Comment>
      */
-    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'author', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'author', cascade: ['remove'], orphanRemoval: true)]
     private Collection $comments;
 
     public function __construct()
     {
         $this->movies = new ArrayCollection();
         $this->comments = new ArrayCollection();
+        if (empty($this->roles)) {
+            $this->roles = ['ROLE_AUTHOR'];
+        }
     }
 
     public function getId(): ?int
@@ -154,13 +158,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        $roles[] = 'ROLE_AUTHOR';
+        if (empty($roles)) {
+            $roles[] = 'ROLE_AUTHOR';
+        }
         return array_unique($roles);
     }
 
     public function setRoles(array $roles): static
     {
-        $this->roles = $roles;
+        if (empty($roles)) {
+            $this->roles = ['ROLE_AUTHOR'];
+        } else {
+            $this->roles = $roles;
+        }
         return $this;
     }
 
@@ -207,6 +217,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->createdAt) {
             $this->createdAt = new DateTimeImmutable();
+        }
+        if (empty($this->roles)) {
+            $this->roles = ['ROLE_AUTHOR'];
         }
     }
 

@@ -43,3 +43,7 @@ services:
     App\Command\StatsCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    App\DataFixtures\MovieMediaFixtures:
+        arguments:
+            $uploadDir: '%kernel.project_dir%/public/uploads/media'

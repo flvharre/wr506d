@@ -40,14 +40,15 @@ security:
         - { path: ^/auth, roles: PUBLIC_ACCESS }
 
         # 2. Accès public aux ROUTES API spécifiques (exceptions à l'authentification)
-        - { path: ^/api/users, roles: PUBLIC_ACCESS, methods: [ POST ] }
+        -  { path: ^/api/authors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/users, roles: PUBLIC_ACCESS, methods: [ POST, GET ] }
         - { path: ^/api/movies, roles: PUBLIC_ACCESS, methods: [ GET ] }
         - { path: ^/api/actors, roles: PUBLIC_ACCESS, methods: [ GET ] }
         - { path: ^/api/directors, roles: PUBLIC_ACCESS, methods: [ GET ] }
         - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [ GET ] }
 
         # 3. Routes admin
-        - { path: ^/api/users, roles: ROLE_ADMIN, methods: [ GET, PATCH, DELETE ] }
+        - { path: ^/api/users, roles: ROLE_ADMIN, methods: [ PATCH, DELETE ] }
 
         # 4. Toutes les AUTRES routes API nécessitent une authentification (règle générale)
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

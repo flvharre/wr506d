@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             processor: CommentCreateProcessor::class
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or object.author == user",
+            security: "is_granted('ROLE_ADMIN') or (object.getAuthor() and object.getAuthor() == user)",
             securityMessage: "Vous ne pouvez supprimer que vos propres commentaires"
         )
     ]
