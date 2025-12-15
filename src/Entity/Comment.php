@@ -28,7 +28,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: "is_granted('PUBLIC_ACCESS')"
         ),
         new Post(
-            security: "is_granted('ROLE_USER')",
+            security: "is_granted('ROLE_AUTHOR')",
             securityMessage: "Vous devez être connecté pour commenter",
             processor: CommentCreateProcessor::class
         ),
@@ -51,8 +51,13 @@ class Comment
     #[Assert\Length(
         min: 3,
         max: 1000,
-        minMessage: "Le commentaire doit faire au moins 3 caractères",
-        maxMessage: "Le commentaire ne peut pas dépasser 1000 caractères"
+        minMessage: "Le commentaire doit faire au moins {{ limit }} caractères",
+        maxMessage: "Le commentaire ne peut pas dépasser {{ limit }} caractères"
+    )]
+    #[Assert\Regex(
+        pattern: '/<script|<iframe|javascript:|on\w+=/i',
+        match: false,
+        message: "Le commentaire contient du contenu non autorisé."
     )]
     #[Groups(['comment:read', 'comment:list', 'movie:read'])]
     private ?string $content = null;
