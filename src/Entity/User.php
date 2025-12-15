@@ -25,8 +25,12 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 #[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+// Ajout de l'unicité de la clé API
+#[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_API_KEY_HASH', fields: ['apiKeyHash'])]
 #[UniqueEntity(fields: ['email'], message: 'Cet email est déjà utilisé.')]
 #[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur est déjà pris.")]
+// Ajout de l'assertion UniqueEntity
+#[UniqueEntity(fields: ['apiKeyHash'], message: 'Cette clé API existe déjà.')]
 #[ApiResource(
     operations: [
         new Post(
@@ -102,12 +106,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?DateTimeImmutable $createdAt = null;
 
-    // Nouvelle propriété pour le rate limit personnalisé
+    // Propriété pour le rate limit personnalisé
     #[ORM\Column(type: 'integer', options: ['default' => 100])]
     #[Assert\Positive(message: "La limite d'API doit être un nombre positif.")]
     #[Assert\LessThanOrEqual(value: 10000, message: "La limite d'API ne peut pas dépasser {{ compared_value }}.")]
     #[Groups(['user:read', 'user:write', 'user:list'])]
     private int $apiRateLimit = 100;
+
+    // Propriétés pour la clé API
+    #[ORM\Column(type: 'string', length: 64, nullable: true)]
+    #[Assert\Length(exactly: 64, exactMessage: "Le hash de la clé API doit faire {{ limit }} caractères")]
+    private ?string $apiKeyHash = null;
+
+    #[ORM\Column(type: 'string', length: 16, nullable: true)]
+    #[Assert\Length(exactly: 16, exactMessage: "Le préfixe de la clé API doit faire {{ limit }} caractères")]
+    #[Groups(['user:read'])]
+    private ?string $apiKeyPrefix = null;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['user:read', 'user:write'])]
+    private bool $apiKeyEnabled = false;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[Groups(['user:read'])]
+    private ?DateTimeImmutable $apiKeyCreatedAt = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[Groups(['user:read'])]
+    private ?DateTimeImmutable $apiKeyLastUsedAt = null;
 
     /**
      * @var Collection<int, Movie>
@@ -230,6 +256,70 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->apiRateLimit = $apiRateLimit;
         return $this;
     }
+
+    // Getters et Setters pour la clé API (ajoutés)
+
+    public function getApiKeyHash(): ?string
+    {
+        return $this->apiKeyHash;
+    }
+
+    public function setApiKeyHash(?string $apiKeyHash): static
+    {
+        $this->apiKeyHash = $apiKeyHash;
+        return $this;
+    }
+
+    public function getApiKeyPrefix(): ?string
+    {
+        return $this->apiKeyPrefix;
+    }
+
+    public function setApiKeyPrefix(?string $apiKeyPrefix): static
+    {
+        $this->apiKeyPrefix = $apiKeyPrefix;
+        return $this;
+    }
+
+    public function isApiKeyEnabled(): bool
+    {
+        return $this->apiKeyEnabled;
+    }
+
+    public function setApiKeyEnabled(bool $apiKeyEnabled): static
+    {
+        $this->apiKeyEnabled = $apiKeyEnabled;
+        return $this;
+    }
+
+    public function getApiKeyCreatedAt(): ?DateTimeImmutable
+    {
+        return $this->apiKeyCreatedAt;
+    }
+
+    public function setApiKeyCreatedAt(?DateTimeImmutable $apiKeyCreatedAt): static
+    {
+        $this->apiKeyCreatedAt = $apiKeyCreatedAt;
+        return $this;
+    }
+
+    public function getApiKeyLastUsedAt(): ?DateTimeImmutable
+    {
+        return $this->apiKeyLastUsedAt;
+    }
+
+    public function setApiKeyLastUsedAt(?DateTimeImmutable $apiKeyLastUsedAt): static
+    {
+        $this->apiKeyLastUsedAt = $apiKeyLastUsedAt;
+        return $this;
+    }
+
+    public function updateApiKeyLastUsedAt(): void // Ajout de la méthode
+    {
+        $this->apiKeyLastUsedAt = new DateTimeImmutable();
+    }
+
+    // Fin des Getters et Setters pour la clé API
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
