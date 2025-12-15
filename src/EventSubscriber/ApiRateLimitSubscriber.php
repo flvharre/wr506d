@@ -96,7 +96,8 @@ final class ApiRateLimitSubscriber implements EventSubscriberInterface
             );
 
             $response->headers->set('Retry-After', (string) $retryAfter->getTimestamp());
-            $response->headers->set('X-RateLimit-Limit', (string) ($isAuthenticated ? $user->getApiRateLimit() : $limit->getLimit()));
+            $limitValue = $isAuthenticated ? $user->getApiRateLimit() : $limit->getLimit();
+            $response->headers->set('X-RateLimit-Limit', (string) $limitValue);
             $response->headers->set('X-RateLimit-Remaining', '0');
             $response->headers->set('X-RateLimit-Reset', (string) $retryAfter->getTimestamp());
 
