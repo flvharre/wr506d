@@ -1,0 +1,13 @@
+framework:
+    rate_limiter:
+        # Limiter for anonymous users (based on IP)
+        anonymous_api:
+            policy: 'fixed_window'
+            limit: 20
+            interval: '1 hour'
+
+        # Default limiter for authenticated users (will be overridden by user attribute)
+        authenticated_api:
+            policy: 'fixed_window'
+            limit: 100
+            interval: '1 hour'

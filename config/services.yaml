@@ -47,3 +47,9 @@ services:
     App\DataFixtures\MovieMediaFixtures:
         arguments:
             $uploadDir: '%kernel.project_dir%/public/uploads/media'
+
+    # Rate Limiter configuration
+    App\EventSubscriber\ApiRateLimitSubscriber:
+        arguments:
+            $anonymousApiLimiter: '@limiter.anonymous_api'
+            $authenticatedApiLimiter: '@limiter.authenticated_api'

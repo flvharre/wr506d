@@ -102,6 +102,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?DateTimeImmutable $createdAt = null;
 
+    // Nouvelle propriété pour le rate limit personnalisé
+    #[ORM\Column(type: 'integer', options: ['default' => 100])]
+    #[Assert\Positive(message: "La limite d'API doit être un nombre positif.")]
+    #[Assert\LessThanOrEqual(value: 10000, message: "La limite d'API ne peut pas dépasser {{ compared_value }}.")]
+    #[Groups(['user:read', 'user:write', 'user:list'])]
+    private int $apiRateLimit = 100;
+
     /**
      * @var Collection<int, Movie>
      */
@@ -209,6 +216,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function getApiRateLimit(): int
+    {
+        return $this->apiRateLimit;
+    }
+
+    public function setApiRateLimit(int $apiRateLimit): static
+    {
+        $this->apiRateLimit = $apiRateLimit;
         return $this;
     }
 
