@@ -3,6 +3,7 @@
 namespace App\EventSubscriber;
 
 use App\Entity\User;
+use DateTimeImmutable;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -54,55 +55,60 @@ final class ApiRateLimitSubscriber implements EventSubscriberInterface
             ? $user->getUserIdentifier()
             : $request->getClientIp() ?? 'unknown';
 
-        // Select appropriate rate limiter and create with custom limit if authenticated
-        if ($isAuthenticated) {
-            // For authenticated users, we'll use a dynamic approach
-            // Create a limiter with user-specific identifier that includes the limit
-            $customLimit = $user->getApiRateLimit();
-            $limiter = $this->authenticatedApiLimiter->create($identifier . '_' . $customLimit);
-
-            // Note: The actual limit is still controlled by the rate_limiter.yaml config
-            // To truly customize per-user, we'd need the user's limit to match or we accept the config limit
-            // For now, we use the config limit but track per user
-        } else {
-            // Use default limiter for anonymous users
-            $limiter = $this->anonymousApiLimiter->create($identifier);
-        }
+        // Select appropriate rate limiter based on authentication status
+        $limiter = $this->selectLimiter($isAuthenticated, $user, $identifier);
 
         // Consume a token from the rate limiter
         $limit = $limiter->consume();
 
+        // Determine the rate limit value
+        $rateLimit = $isAuthenticated ? $user->getApiRateLimit() : $limit->getLimit();
+
         // Store rate limit info in request attributes for the response listener
         $request->attributes->set('_rate_limit', [
-            'limit' => $isAuthenticated ? $user->getApiRateLimit() : $limit->getLimit(),
+            'limit' => $rateLimit,
             'remaining' => $limit->getRemainingTokens(),
             'reset' => $limit->getRetryAfter()->getTimestamp(),
         ]);
 
         if (!$limit->isAccepted()) {
-            $retryAfter = $limit->getRetryAfter();
-            $now = new \DateTimeImmutable();
-            $waitSeconds = $retryAfter->getTimestamp() - $now->getTimestamp();
-
-            $response = new JsonResponse(
-                [
-                    'error' => 'Too Many Requests',
-                    'message' => 'Rate limit exceeded. Please try again later.',
-                    'retry_after_seconds' => $waitSeconds,
-                    'retry_after_datetime' => $retryAfter->format('Y-m-d H:i:s'),
-                    'retry_after_timestamp' => $retryAfter->getTimestamp(),
-                ],
-                429
-            );
-
-            $response->headers->set('Retry-After', (string) $retryAfter->getTimestamp());
-            $limitValue = $isAuthenticated ? $user->getApiRateLimit() : $limit->getLimit();
-            $response->headers->set('X-RateLimit-Limit', (string) $limitValue);
-            $response->headers->set('X-RateLimit-Remaining', '0');
-            $response->headers->set('X-RateLimit-Reset', (string) $retryAfter->getTimestamp());
-
-            $event->setResponse($response);
+            $this->handleRateLimitExceeded($event, $limit, $rateLimit);
         }
+    }
+
+    private function selectLimiter(bool $isAuthenticated, mixed $user, string $identifier): mixed
+    {
+        if ($isAuthenticated) {
+            $customLimit = $user->getApiRateLimit();
+            return $this->authenticatedApiLimiter->create($identifier . '_' . $customLimit);
+        }
+
+        return $this->anonymousApiLimiter->create($identifier);
+    }
+
+    private function handleRateLimitExceeded(RequestEvent $event, mixed $limit, int $rateLimit): void
+    {
+        $retryAfter = $limit->getRetryAfter();
+        $now = new DateTimeImmutable();
+        $waitSeconds = $retryAfter->getTimestamp() - $now->getTimestamp();
+
+        $response = new JsonResponse(
+            [
+                'error' => 'Too Many Requests',
+                'message' => 'Rate limit exceeded. Please try again later.',
+                'retry_after_seconds' => $waitSeconds,
+                'retry_after_datetime' => $retryAfter->format('Y-m-d H:i:s'),
+                'retry_after_timestamp' => $retryAfter->getTimestamp(),
+            ],
+            429
+        );
+
+        $response->headers->set('Retry-After', (string) $retryAfter->getTimestamp());
+        $response->headers->set('X-RateLimit-Limit', (string) $rateLimit);
+        $response->headers->set('X-RateLimit-Remaining', '0');
+        $response->headers->set('X-RateLimit-Reset', (string) $retryAfter->getTimestamp());
+
+        $event->setResponse($response);
     }
 
     public function onKernelResponse(ResponseEvent $event): void

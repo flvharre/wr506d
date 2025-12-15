@@ -175,9 +175,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (empty($roles)) {
             $this->roles = ['ROLE_AUTHOR'];
-        } else {
-            $this->roles = $roles;
+            return $this;
         }
+
+        $this->roles = $roles;
         return $this;
     }
 
