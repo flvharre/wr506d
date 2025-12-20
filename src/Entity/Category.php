@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use App\Repository\CategoryRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -20,14 +22,23 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new Get(security: "is_granted('PUBLIC_ACCESS')"),
-        new GetCollection(security: "is_granted('PUBLIC_ACCESS')"),
+        new Get(
+            normalizationContext: ['groups' => ['category:read']],
+            security: "is_granted('PUBLIC_ACCESS')"
+        ),
+        new GetCollection(
+            normalizationContext: ['groups' => ['category:read']],
+            security: "is_granted('PUBLIC_ACCESS')"
+        ),
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
         new Delete(security: "is_granted('ROLE_ADMIN')")
     ],
-    normalizationContext: ['groups' => ['category:read']]
+    order: ['createdAt' => 'DESC'],
+    paginationItemsPerPage: 15,
+    paginationClientItemsPerPage: true
 )]
+#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial'])]
 class Category
 {
     #[ORM\Id]
@@ -48,6 +59,7 @@ class Category
     private Collection $movies;
 
     #[ORM\Column]
+    #[Groups(['category:read'])]
     private ?DateTimeImmutable $createdAt = null;
 
     public function __construct()
@@ -68,7 +80,6 @@ class Category
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
 
@@ -85,14 +96,12 @@ class Category
         if (!$this->movies->contains($movie)) {
             $this->movies->add($movie);
         }
-
         return $this;
     }
 
     public function removeMovie(Movie $movie): static
     {
         $this->movies->removeElement($movie);
-
         return $this;
     }
 
@@ -104,13 +113,14 @@ class Category
     public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
-        $this->createdAt = new DateTimeImmutable();
+        if (!$this->createdAt) {
+            $this->createdAt = new DateTimeImmutable();
+        }
     }
 }

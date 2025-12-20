@@ -54,6 +54,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
             securityMessage: "Seul l'administrateur ou l'auteur du film peut le supprimer."
         ),
     ],
+    order: ['createdAt' => 'DESC'],
+    paginationClientItemsPerPage: true,
     paginationItemsPerPage: 10
 )]
 class Movie
@@ -61,7 +63,7 @@ class Movie
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['movie:list', 'movie:read', 'comment:list'])]
+    #[Groups(['movie:list', 'movie:read', 'comment:list', 'actor:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -72,7 +74,7 @@ class Movie
         minMessage: "Le nom doit contenir au moins {{ limit }} caractères.",
         maxMessage: "Le nom ne peut pas dépasser {{ limit }} caractères."
     )]
-    #[Groups(['movie:list', 'movie:read', 'comment:list'])]
+    #[Groups(['movie:list', 'movie:read', 'comment:list', 'actor:read'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -146,7 +148,7 @@ class Movie
      */
     #[ORM\OneToMany(targetEntity: MediaObject::class, mappedBy: 'movie', orphanRemoval: true)]
     #[ORM\OrderBy(['createdAt' => 'DESC'])]
-    #[Groups(['movie:list', 'movie:read'])]
+    #[Groups(['movie:list', 'movie:read', 'actor:read'])]
     private Collection $mediaObjects;
 
     /**

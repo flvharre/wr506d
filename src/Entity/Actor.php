@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use App\Repository\ActorRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -22,38 +24,44 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ApiResource(
     operations: [
         new Get(
+            normalizationContext: ['groups' => ['actor:read']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
         new GetCollection(
+            normalizationContext: ['groups' => ['actor:list']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
-        new Post(security: "is_granted('ROLE_ADMIN')"),
-        new Patch(security: "is_granted('ROLE_ADMIN')"),
-        new Delete(security: "is_granted('ROLE_ADMIN')")
+        new Post(security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_EDITOR')"),
+        new Patch(security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_EDITOR')"),
+        new Delete(security: "is_granted('ROLE_ADMIN') or is_granted('ROLE_EDITOR')")
     ],
-    normalizationContext: ['groups' => ['actor:read']]
+    order: ['createdAt' => 'DESC'],
+    paginationClientItemsPerPage: true,
+    paginationItemsPerPage: 12
 )]
+#[ApiFilter(SearchFilter::class, properties: ['lastname' => 'partial', 'firstname' => 'partial'])]
 class Actor
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['actor:read', 'movie:read'])]
+    #[Groups(['actor:read', 'actor:list', 'movie:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(message: "Le nom de famille de l'acteur est obligatoire.")]
     #[Assert\Length(max: 255, maxMessage: "Le nom ne peut pas dépasser 255 caractères.")]
-    #[Groups(['actor:read', 'movie:read'])]
+    #[Groups(['actor:read', 'actor:list', 'movie:read'])]
     private ?string $lastname = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Length(max: 255, maxMessage: "Le prénom ne peut pas dépasser 255 caractères.")]
-    #[Groups(['actor:read', 'movie:read'])]
+    #[Groups(['actor:read', 'actor:list', 'movie:read'])]
     private ?string $firstname = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Assert\LessThan("today", message: "La date de naissance doit être dans le passé.")]
+    #[Groups(['actor:read', 'actor:list'])]
     private ?\DateTime $dob = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
@@ -62,26 +70,36 @@ class Actor
         "value === null or this.getDob() === null or value > this.getDob()",
         message: "La date de décès doit être postérieure à la date de naissance."
     )]
+    #[Groups(['actor:read', 'actor:list'])]
     private ?\DateTime $dod = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['actor:read', 'actor:list'])]
     private ?string $bio = null;
 
-    #[ORM\ManyToOne(inversedBy: 'actors')]
-    private ?MediaObject $photo = null;
+    /**
+     * @var Collection<int, MediaObject>
+     */
+    #[ORM\OneToMany(targetEntity: MediaObject::class, mappedBy: 'actor', orphanRemoval: true)]
+    #[ORM\OrderBy(['createdAt' => 'DESC'])]
+    #[Groups(['actor:read', 'actor:list'])]
+    private Collection $mediaObjects;
 
     /**
      * @var Collection<int, Movie>
      */
     #[ORM\ManyToMany(targetEntity: Movie::class, inversedBy: 'actors')]
+    #[Groups(['actor:read'])]
     private Collection $movies;
 
     #[ORM\Column]
+    #[Groups(['actor:read', 'actor:list'])]
     private ?DateTimeImmutable $createdAt = null;
 
     public function __construct()
     {
         $this->movies = new ArrayCollection();
+        $this->mediaObjects = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -97,7 +115,6 @@ class Actor
     public function setLastname(string $lastname): static
     {
         $this->lastname = $lastname;
-
         return $this;
     }
 
@@ -109,7 +126,6 @@ class Actor
     public function setFirstname(?string $firstname): static
     {
         $this->firstname = $firstname;
-
         return $this;
     }
 
@@ -121,7 +137,6 @@ class Actor
     public function setDob(\DateTime $dob): static
     {
         $this->dob = $dob;
-
         return $this;
     }
 
@@ -133,7 +148,6 @@ class Actor
     public function setDod(?\DateTime $dod): static
     {
         $this->dod = $dod;
-
         return $this;
     }
 
@@ -145,19 +159,33 @@ class Actor
     public function setBio(?string $bio): static
     {
         $this->bio = $bio;
-
         return $this;
     }
 
-    public function getPhoto(): ?MediaObject
+    /**
+     * @return Collection<int, MediaObject>
+     */
+    public function getMediaObjects(): Collection
     {
-        return $this->photo;
+        return $this->mediaObjects;
     }
 
-    public function setPhoto(?MediaObject $photo): static
+    public function addMediaObject(MediaObject $mediaObject): static
     {
-        $this->photo = $photo;
+        if (!$this->mediaObjects->contains($mediaObject)) {
+            $this->mediaObjects->add($mediaObject);
+            $mediaObject->setActor($this);
+        }
+        return $this;
+    }
 
+    public function removeMediaObject(MediaObject $mediaObject): static
+    {
+        if ($this->mediaObjects->removeElement($mediaObject)) {
+            if ($mediaObject->getActor() === $this) {
+                $mediaObject->setActor(null);
+            }
+        }
         return $this;
     }
 
@@ -174,14 +202,12 @@ class Actor
         if (!$this->movies->contains($movie)) {
             $this->movies->add($movie);
         }
-
         return $this;
     }
 
     public function removeMovie(Movie $movie): static
     {
         $this->movies->removeElement($movie);
-
         return $this;
     }
 
@@ -193,7 +219,6 @@ class Actor
     public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 

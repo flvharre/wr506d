@@ -15,17 +15,16 @@ final class UserPasswordHasher implements ProcessorInterface
 
     public function process($data, Operation $operation, array $uriVariables = [], array $context = [])
     {
-        // Si plainPassword est défini, on le hash
+        // Hash le mot de passe si plainPassword est défini (création ET modification)
         if ($data->getPlainPassword()) {
             $hashedPassword = $this->passwordHasher->hashPassword(
                 $data,
                 $data->getPlainPassword()
             );
             $data->setPassword($hashedPassword);
-            $data->eraseCredentials(); // supprime plainPassword pour sécurité
+            $data->eraseCredentials();
         }
 
-        // Appelle le processor de base (Doctrine) pour persister
         return $this->processor->process($data, $operation, $uriVariables, $context);
     }
 }

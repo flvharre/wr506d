@@ -1,5 +1,4 @@
 <?php
-// api/src/Entity/MediaObject.php
 
 namespace App\Entity;
 
@@ -15,8 +14,6 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
-use App\Entity\Movie;
-use App\Entity\Actor;
 
 #[Vich\Uploadable]
 #[ORM\Entity]
@@ -61,11 +58,11 @@ use App\Entity\Actor;
 class MediaObject
 {
     #[ORM\Id, ORM\Column, ORM\GeneratedValue]
-    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read', 'actor:read', 'actor:list'])]
     private ?int $id = null;
 
     #[ApiProperty(types: ['https://schema.org/contentUrl'], writable: false)]
-    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read', 'actor:read', 'actor:list'])]
     public ?string $contentUrl = null;
 
     #[Vich\UploadableField(mapping: 'media_object', fileNameProperty: 'filePath')]
@@ -74,7 +71,7 @@ class MediaObject
 
     #[ApiProperty(writable: false)]
     #[ORM\Column(nullable: true)]
-    #[Groups(['media_object:read', 'movie:list', 'movie:read'])]
+    #[Groups(['media_object:read', 'movie:list', 'movie:read', 'actor:read', 'actor:list'])]
     public ?string $filePath = null;
 
     #[ORM\ManyToOne(targetEntity: Movie::class, inversedBy: 'mediaObjects')]
@@ -84,12 +81,15 @@ class MediaObject
     public ?Actor $actor = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
+    #[Groups(['media_object:read'])]
     private ?DateTimeImmutable $createdAt = null;
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
-        $this->createdAt = new DateTimeImmutable();
+        if (!$this->createdAt) {
+            $this->createdAt = new DateTimeImmutable();
+        }
     }
 
     public function getCreatedAt(): ?DateTimeImmutable
