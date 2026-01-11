@@ -45,4 +45,4 @@ jobs:
             - name: Run PHPStan
               run: vendor/bin/phpstan analyze src/
             - name: Run PHPMD
-              run: vendor/bin/phpmd src/ text cleancode,codesize,controversial,design
+              run: vendor/bin/phpmd src/ text phpmd.xml.dist

@@ -10,7 +10,6 @@ use App\Repository\UserRepository;
 use App\State\UserPasswordHasher;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use DateTimeImmutable;
@@ -25,11 +24,9 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 #[ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
-// Ajout de l'unicité de la clé API
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_API_KEY_HASH', fields: ['apiKeyHash'])]
 #[UniqueEntity(fields: ['email'], message: 'Cet email est déjà utilisé.')]
 #[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur est déjà pris.")]
-// Ajout de l'assertion UniqueEntity
 #[UniqueEntity(fields: ['apiKeyHash'], message: 'Cette clé API existe déjà.')]
 #[ApiResource(
     operations: [
@@ -37,17 +34,16 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             security: "is_granted('PUBLIC_ACCESS')",
             processor: UserPasswordHasher::class
         ),
-        new Put(processor: UserPasswordHasher::class),
         new Get(
             normalizationContext: ['groups' => ['user:read']],
-            security: "is_granted('ROLE_ADMIN')"
+            security: "is_granted('ROLE_ADMIN') or object == user"
         ),
         new GetCollection(
             normalizationContext: ['groups' => ['user:list']],
             security: "is_granted('PUBLIC_ACCESS')"
         ),
         new Patch(
-            security: "is_granted('ROLE_ADMIN')",
+            security: "is_granted('ROLE_ADMIN') or object == user",
             processor: UserPasswordHasher::class
         ),
         new Delete(security: "is_granted('ROLE_ADMIN')"),
@@ -67,7 +63,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\NotBlank(message: "L'email est obligatoire.")]
     #[Assert\Email(message: "L'email '{{ value }}' n'est pas valide.")]
     #[Assert\Length(max: 180, maxMessage: "L'email ne peut pas dépasser {{ limit }} caractères.")]
-    #[Groups(['user:read', 'user:write'])]
+    #[Groups(['user:read', 'user:write', 'user:list'])]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
@@ -103,24 +99,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $plainPassword = null;
 
     #[ORM\Column]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'user:list'])]
     private ?DateTimeImmutable $createdAt = null;
 
-    // Propriété pour le rate limit personnalisé
     #[ORM\Column(type: 'integer', options: ['default' => 100])]
     #[Assert\Positive(message: "La limite d'API doit être un nombre positif.")]
     #[Assert\LessThanOrEqual(value: 10000, message: "La limite d'API ne peut pas dépasser {{ compared_value }}.")]
     #[Groups(['user:read', 'user:write', 'user:list'])]
-    private int $apiRateLimit = 100;
+    private int $apiRateLimit = 10000;
 
-    // Propriétés pour la clé API
     #[ORM\Column(type: 'string', length: 64, nullable: true)]
-    #[Assert\Length(exactly: 64, exactMessage: "Le hash de la clé API doit faire {{ limit }} caractères")]
+    #[Assert\Length(exactly: 64, exactMessage: "Le hash de la clé API doit faire exactement {{ limit }} caractères.")]
     private ?string $apiKeyHash = null;
 
     #[ORM\Column(type: 'string', length: 16, nullable: true)]
-    #[Assert\Length(exactly: 16, exactMessage: "Le préfixe de la clé API doit faire {{ limit }} caractères")]
-    #[Groups(['user:read'])]
+    #[Assert\LessThanOrEqual(
+        value: 10000,
+        message: "La limite d'API ne peut pas dépasser {{ compared_value }}."
+    )]    #[Groups(['user:read'])]
     private ?string $apiKeyPrefix = null;
 
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
@@ -134,6 +130,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     #[Groups(['user:read'])]
     private ?DateTimeImmutable $apiKeyLastUsedAt = null;
+
+    // Champs 2FA
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $twoFactorSecret = null;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['user:read'])]
+    private bool $twoFactorEnabled = false;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $twoFactorBackupCodes = null;
 
     /**
      * @var Collection<int, Movie>
@@ -257,8 +264,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    // Getters et Setters pour la clé API (ajoutés)
-
     public function getApiKeyHash(): ?string
     {
         return $this->apiKeyHash;
@@ -314,12 +319,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function updateApiKeyLastUsedAt(): void // Ajout de la méthode
+    public function updateApiKeyLastUsedAt(): void
     {
         $this->apiKeyLastUsedAt = new DateTimeImmutable();
     }
 
-    // Fin des Getters et Setters pour la clé API
+    // Getters et Setters 2FA
+    public function getTwoFactorSecret(): ?string
+    {
+        return $this->twoFactorSecret;
+    }
+
+    public function setTwoFactorSecret(?string $twoFactorSecret): static
+    {
+        $this->twoFactorSecret = $twoFactorSecret;
+        return $this;
+    }
+
+    public function isTwoFactorEnabled(): bool
+    {
+        return $this->twoFactorEnabled;
+    }
+
+    public function setTwoFactorEnabled(bool $twoFactorEnabled): static
+    {
+        $this->twoFactorEnabled = $twoFactorEnabled;
+        return $this;
+    }
+
+    public function getTwoFactorBackupCodes(): ?array
+    {
+        return $this->twoFactorBackupCodes;
+    }
+
+    public function setTwoFactorBackupCodes(?array $twoFactorBackupCodes): static
+    {
+        $this->twoFactorBackupCodes = $twoFactorBackupCodes;
+        return $this;
+    }
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
