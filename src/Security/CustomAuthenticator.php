@@ -48,89 +48,136 @@ class CustomAuthenticator extends AbstractAuthenticator
         $totpCode = $data['totp_code'] ?? null;
 
         if (!is_string($email) || !is_string($password)) {
-            throw new CustomUserMessageAuthenticationException('Email and password must be strings');
+            throw new CustomUserMessageAuthenticationException(
+                'Email and password must be strings'
+            );
         }
 
         if (empty($email) || empty($password)) {
-            throw new CustomUserMessageAuthenticationException('Email and password are required');
+            throw new CustomUserMessageAuthenticationException(
+                'Email and password are required'
+            );
         }
 
         $request->attributes->set('_auth_password', $password);
         $request->attributes->set('_auth_totp_code', $totpCode);
 
-        return new SelfValidatingPassport(new UserBadge($email, function (string $userIdentifier) {
-            $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
-            if (!$user instanceof User) {
-                throw new CustomUserMessageAuthenticationException('Invalid credentials');
-            }
-            return $user;
-        }));
+        return new SelfValidatingPassport(
+            new UserBadge($email, function (string $userIdentifier) {
+                $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
+                if (!$user instanceof User) {
+                    throw new CustomUserMessageAuthenticationException('Invalid credentials');
+                }
+                return $user;
+            })
+        );
     }
 
-    public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
-    {
+    public function onAuthenticationSuccess(
+        Request $request,
+        TokenInterface $token,
+        string $firewallName
+    ): ?Response {
         $user = $token->getUser();
 
         if (!$user instanceof User) {
-            return new JsonResponse(['error' => 'Invalid user'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'Invalid user'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         $password = $request->attributes->get('_auth_password');
         if (!is_string($password)) {
-            return new JsonResponse(['error' => 'Invalid password format'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'Invalid password format'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         if (!$this->passwordHasher->isPasswordValid($user, $password)) {
-            return new JsonResponse(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'Invalid credentials'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
-        if ($user->isTwoFactorEnabled() && $user->getTwoFactorSecret() !== null) {
-            $totpCode = $request->attributes->get('_auth_totp_code');
-
-            if ($totpCode === null || $totpCode === '') {
-                return new JsonResponse([
-                    'status' => 'totp_required',
-                    'message' => '2FA code required. Please provide totp_code in the request body.',
-                ], Response::HTTP_UNAUTHORIZED);
-            }
-
-            if (!is_string($totpCode)) {
-                return new JsonResponse([
-                    'error' => 'Invalid TOTP code format',
-                ], Response::HTTP_UNAUTHORIZED);
-            }
-
-            $isValid = $this->twoFactorService->verifyCode($user, $totpCode);
-
-            if (!$isValid) {
-                $isBackupCode = $this->twoFactorService->verifyBackupCode($user, $totpCode);
-
-                if ($isBackupCode) {
-                    $this->twoFactorService->removeBackupCode($user, $totpCode);
-                    $this->entityManager->flush();
-
-                    $jwt = $this->jwtManager->create($user);
-                    return new JsonResponse([
-                        'token' => $jwt,
-                        'message' => 'Backup code used successfully. Please generate new backup codes.',
-                        'backup_codes_remaining' => count($user->getTwoFactorBackupCodes() ?? []),
-                    ]);
-                }
-
-                return new JsonResponse([
-                    'error' => 'Invalid 2FA code',
-                ], Response::HTTP_UNAUTHORIZED);
-            }
+        $twoFactorResponse = $this->handleTwoFactorAuth($request, $user);
+        if ($twoFactorResponse !== null) {
+            return $twoFactorResponse;
         }
 
+        return $this->createSuccessResponse($user);
+    }
+
+    private function handleTwoFactorAuth(Request $request, User $user): ?JsonResponse
+    {
+        if (!$user->isTwoFactorEnabled() || $user->getTwoFactorSecret() === null) {
+            return null;
+        }
+
+        $totpCode = $request->attributes->get('_auth_totp_code');
+
+        if ($totpCode === null || $totpCode === '') {
+            return new JsonResponse([
+                'status' => 'totp_required',
+                'message' => '2FA code required. Please provide totp_code in the request body.',
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if (!is_string($totpCode)) {
+            return new JsonResponse([
+                'error' => 'Invalid TOTP code format',
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->verifyTwoFactorCode($user, $totpCode);
+    }
+
+    private function verifyTwoFactorCode(User $user, string $totpCode): ?JsonResponse
+    {
+        $isValid = $this->twoFactorService->verifyCode($user, $totpCode);
+
+        if ($isValid) {
+            return null;
+        }
+
+        $isBackupCode = $this->twoFactorService->verifyBackupCode($user, $totpCode);
+
+        if ($isBackupCode) {
+            return $this->handleBackupCode($user, $totpCode);
+        }
+
+        return new JsonResponse([
+            'error' => 'Invalid 2FA code',
+        ], Response::HTTP_UNAUTHORIZED);
+    }
+
+    private function handleBackupCode(User $user, string $code): JsonResponse
+    {
+        $this->twoFactorService->removeBackupCode($user, $code);
+        $this->entityManager->flush();
+
+        $jwt = $this->jwtManager->create($user);
+        return new JsonResponse([
+            'token' => $jwt,
+            'message' => 'Backup code used successfully. Please generate new backup codes.',
+            'backup_codes_remaining' => count($user->getTwoFactorBackupCodes() ?? []),
+        ]);
+    }
+
+    private function createSuccessResponse(User $user): JsonResponse
+    {
         $jwt = $this->jwtManager->create($user);
         return new JsonResponse([
             'token' => $jwt,
         ]);
     }
 
-    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
-    {
+    public function onAuthenticationFailure(
+        Request $request,
+        AuthenticationException $exception
+    ): ?Response {
         return new JsonResponse([
             'error' => $exception->getMessage(),
         ], Response::HTTP_UNAUTHORIZED);

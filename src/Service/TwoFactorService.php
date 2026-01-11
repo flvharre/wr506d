@@ -10,6 +10,7 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use OTPHP\TOTP;
+use RuntimeException;
 
 class TwoFactorService
 {
@@ -36,7 +37,7 @@ class TwoFactorService
     {
         $secret = $user->getTwoFactorSecret();
         if ($secret === null) {
-            throw new \RuntimeException('User does not have a 2FA secret');
+            throw new RuntimeException('User does not have a 2FA secret');
         }
 
         $totp = TOTP::createFromSecret($secret);
@@ -61,8 +62,6 @@ class TwoFactorService
     {
         $provisioningUri = $this->getProvisioningUri($user);
 
-        // Création du QR Code avec Endroid QR Code 6.0
-        // Utilisation des paramètres nommés dans le constructeur
         $qrCode = new QrCode(
             data: $provisioningUri,
             encoding: new Encoding('UTF-8'),
