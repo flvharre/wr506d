@@ -8,7 +8,7 @@ security:
         App\Entity\User: 'auto'
 
     providers:
-        users:
+        app_user_provider:
             entity:
                 class: App\Entity\User
                 property: email
@@ -18,22 +18,22 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
-        api:
-            pattern: ^/api/
-            stateless: true
-            jwt: ~
-            custom_authenticators:
-                - App\Security\ApiKeyAuthenticator
-
+        # Firewall pour l'authentification (/auth) avec 2FA
         main:
             pattern: ^/auth$
             stateless: true
-            json_login:
-                check_path: /auth
-                username_path: email
-                password_path: password
-                success_handler: lexik_jwt_authentication.handler.authentication_success
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+            provider: app_user_provider
+            custom_authenticators:
+                - App\Security\CustomAuthenticator
+
+        # Firewall pour l'API protégée par JWT et API Key
+        api:
+            pattern: ^/api/
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
+            custom_authenticators:
+                - App\Security\ApiKeyAuthenticator
 
     access_control:
         # Accès public

@@ -3,9 +3,10 @@
 namespace App\Service;
 
 use App\Entity\User;
-use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use OTPHP\TOTP;
@@ -60,16 +61,21 @@ class TwoFactorService
     {
         $provisioningUri = $this->getProvisioningUri($user);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->writerOptions([])
-            ->data($provisioningUri)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
-            ->build();
+        // Création du QR Code avec Endroid QR Code 6.0
+        // Utilisation des paramètres nommés dans le constructeur
+        $qrCode = new QrCode(
+            data: $provisioningUri,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+            roundBlockSizeMode: RoundBlockSizeMode::Margin,
+            foregroundColor: new Color(0, 0, 0),
+            backgroundColor: new Color(255, 255, 255)
+        );
+
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
 
         return 'data:image/png;base64,' . base64_encode($result->getString());
     }
