@@ -113,8 +113,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $apiKeyHash = null;
 
     #[ORM\Column(type: 'string', length: 16, nullable: true)]
-    #[Assert\Length(exactly: 16, exactMessage: "Le préfixe de la clé API doit faire exactement {{ limit }} caractères.")]
-    #[Groups(['user:read'])]
+    #[Assert\LessThanOrEqual(
+        value: 10000,
+        message: "La limite d'API ne peut pas dépasser {{ compared_value }}."
+    )]    #[Groups(['user:read'])]
     private ?string $apiKeyPrefix = null;
 
     #[ORM\Column(type: 'boolean', options: ['default' => false])]

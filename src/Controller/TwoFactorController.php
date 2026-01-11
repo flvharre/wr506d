@@ -29,7 +29,10 @@ class TwoFactorController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'User not found'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         $secret = $this->twoFactorService->generateSecret();
@@ -45,7 +48,9 @@ class TwoFactorController extends AbstractController
             'secret' => $secret,
             'qr_code' => $qrCodeDataUri,
             'provisioning_uri' => $provisioningUri,
-            'message' => 'Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.) then call /api/2fa/enable with a code to activate 2FA.',
+            'message' => 'Scan the QR code with your authenticator app ' .
+                '(Google Authenticator, Authy, etc.) then call ' .
+                '/api/2fa/enable with a code to activate 2FA.',
         ]);
     }
 
@@ -57,18 +62,27 @@ class TwoFactorController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'User not found'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         $data = json_decode($request->getContent(), true);
         $code = $data['code'] ?? '';
 
         if (empty($code)) {
-            return new JsonResponse(['error' => 'Code is required'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(
+                ['error' => 'Code is required'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         if (!$this->twoFactorService->verifyCode($user, $code)) {
-            return new JsonResponse(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(
+                ['error' => 'Invalid code'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         $backupCodes = $this->twoFactorService->generateBackupCodes();
@@ -82,7 +96,9 @@ class TwoFactorController extends AbstractController
         return new JsonResponse([
             'message' => '2FA enabled successfully',
             'backup_codes' => $backupCodes,
-            'warning' => 'Save these backup codes in a safe place. They can be used to access your account if you lose your authenticator device.',
+            'warning' => 'Save these backup codes in a safe place. ' .
+                'They can be used to access your account if you lose ' .
+                'your authenticator device.',
         ]);
     }
 
@@ -94,18 +110,27 @@ class TwoFactorController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'User not found'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         $data = json_decode($request->getContent(), true);
         $code = $data['code'] ?? '';
 
         if (empty($code)) {
-            return new JsonResponse(['error' => 'Code is required'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(
+                ['error' => 'Code is required'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         if (!$this->twoFactorService->verifyCode($user, $code)) {
-            return new JsonResponse(['error' => 'Invalid code'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(
+                ['error' => 'Invalid code'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         $user->setTwoFactorEnabled(false);
@@ -127,13 +152,18 @@ class TwoFactorController extends AbstractController
         $user = $this->getUser();
 
         if (!$user instanceof User) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(
+                ['error' => 'User not found'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
         return new JsonResponse([
             'enabled' => $user->isTwoFactorEnabled(),
             'has_secret' => $user->getTwoFactorSecret() !== null,
-            'backup_codes_count' => $user->getTwoFactorBackupCodes() ? count($user->getTwoFactorBackupCodes()) : 0,
+            'backup_codes_count' => $user->getTwoFactorBackupCodes()
+                ? count($user->getTwoFactorBackupCodes())
+                : 0,
         ]);
     }
 }
