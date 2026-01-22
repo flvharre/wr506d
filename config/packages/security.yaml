@@ -1,0 +1,62 @@
+security:
+    role_hierarchy:
+        ROLE_AUTHOR: [ ROLE_MEMBER ]
+        ROLE_EDITOR: [ ROLE_AUTHOR ]
+        ROLE_ADMIN: [ ROLE_EDITOR ]
+
+    password_hashers:
+        App\Entity\User: 'auto'
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        # Firewall pour l'authentification (/auth) avec 2FA
+        main:
+            pattern: ^/auth$
+            stateless: true
+            provider: app_user_provider
+            custom_authenticators:
+                - App\Security\CustomAuthenticator
+
+        # Firewall pour l'API protégée par JWT et API Key
+        api:
+            pattern: ^/api/
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
+            custom_authenticators:
+                - App\Security\ApiKeyAuthenticator
+
+    access_control:
+        # Accès public
+        - { path: ^/$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/auth, roles: PUBLIC_ACCESS }
+
+        # Routes API publiques en lecture
+        - { path: ^/api/authors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/users, roles: PUBLIC_ACCESS, methods: [ POST, GET ] }
+        - { path: ^/api/movies, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/actors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/directors, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [ GET ] }
+
+        # Routes admin (DELETE seulement, PATCH géré par API Platform)
+        - { path: ^/api/users, roles: ROLE_ADMIN, methods: [ DELETE ] }
+
+        # Toutes les autres routes API nécessitent une authentification
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+#    access_control:
+#        # Garder seulement ces 3 lignes
+#        - { path: ^/$, roles: PUBLIC_ACCESS }
+#        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+#        - { path: ^/auth, roles: PUBLIC_ACCESS }
